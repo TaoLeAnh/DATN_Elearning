@@ -1,0 +1,52 @@
+﻿@page "/nghiep-vu/quan-ly-log-vi-pham"
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Commons.Querys.Grid
+@using Elearning.Shared.Commons.Querys.ModalQuery
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Lịch sử Vi phạm quy chế thi</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:flex-end">
+        <FluentSearch style="width:300px" Placeholder="Tìm theo tên học viên / Tên đề..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="LogViPhamDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 20% 25% 15% 15% 20%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+
+        <TemplateColumn Title="Học viên" Sortable="true" SortBy="@_sortNguoiDung">
+            <div style="font-weight: 600;">@context.TenNguoiDung</div>
+            @* <div style="font-size: 0.85em; color: gray;">Mã SV: @context.MaNguoiDung</div> *@
+        </TemplateColumn>
+
+        <PropertyColumn Title="Đề thi / Bài thi" Property="@(c => c.TenDeThi)" Sortable="false" />
+
+        <TemplateColumn Title="Loại vi phạm" Sortable="true" SortBy="@_sortLoaiViPham">
+            <FluentBadge Appearance="Appearance.Accent" Fill="var(--error-fill)">
+                @context.TenLoaiViPham
+            </FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thời điểm" Sortable="true" SortBy="@_sortThoiDiem">
+            <div style="font-weight: 500;">@context.ThoiDiemViPham.ToString("dd/MM/yyyy")</div>
+            <div style="font-size: 0.85em; color: gray;">@context.ThoiDiemViPham.ToString("HH:mm:ss")</div>
+        </TemplateColumn>
+
+        <PropertyColumn Title="Ghi chú chi tiết" Property="@(c => c.ChiTiet)" Sortable="false" />
+
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

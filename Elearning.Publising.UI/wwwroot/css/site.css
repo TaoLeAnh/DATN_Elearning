@@ -1,0 +1,776 @@
+/* ASP.NET CORE DEFAULT */
+html {
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+body {
+    margin-bottom: 60px;
+}
+
+/* HERO SECTION */
+.hero-section {
+    padding-top: 20px;
+    padding-bottom: 50px;
+    background-color: #f0f8ff;
+}
+
+.hero-menu {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    overflow: hidden;
+    height: 100%;
+}
+
+    .hero-menu .menu-header {
+        background-color: #f8f9fa;
+        padding: 12px 15px;
+        font-weight: bold;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .hero-menu .list-group-item {
+        border: none;
+        border-bottom: 1px solid #f1f1f1;
+        padding: 12px 15px;
+        font-size: 14px;
+        color: #444;
+        transition: 0.2s;
+    }
+
+        .hero-menu .list-group-item:hover {
+            color: #0072bc;
+            background-color: #f8fcf8;
+            padding-left: 20px;
+        }
+
+.hero-right-banners img {
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: 0.3s;
+}
+
+    .hero-right-banners img:hover {
+        transform: translateY(-3px);
+    }
+
+/* STATS SECTION */
+.stats-wrapper {
+    margin-top: -40px;
+    position: relative;
+    z-index: 10;
+    margin-bottom: 40px;
+}
+
+.stats-bar {
+    background: linear-gradient(90deg, #0072bc 0%, #00a0e9 100%);
+    border-radius: 10px;
+    color: #fff;
+    padding: 15px 30px;
+    box-shadow: 0 10px 20px rgba(0, 114, 188, 0.2);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.stat-text {
+    font-size: 14px;
+    margin: 0;
+    opacity: 0.9;
+}
+
+.stat-divider {
+    width: 1px;
+    background-color: rgba(255,255,255,0.2);
+    height: 40px;
+}
+
+/* COURSE CARDS */
+.w-40-custom {
+    width: 100%;
+}
+
+.w-60-custom {
+    width: 100%;
+}
+
+@media (min-width: 992px) {
+    .w-40-custom {
+        width: 40%;
+    }
+
+    .w-60-custom {
+        width: 60%;
+    }
+}
+
+.swiper {
+    padding-bottom: 20px !important;
+}
+
+.course-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid #eaeaea;
+    cursor: pointer;
+    height: 380px !important;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+    .course-card > .position-relative.w-100 {
+        flex: 0 0 160px !important;
+        height: 160px;
+    }
+
+    .course-card .card-body {
+        flex: 1 1 auto;
+        padding: 1.25rem !important;
+    }
+
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+.course-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+    z-index: 10;
+}
+
+/* SWIPER NAV BUTTONS */
+.custom-nav-btn {
+    width: 40px !important;
+    height: 40px !important;
+    background-color: #fff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    color: #777 !important;
+    transition: 0.3s !important;
+    top: 50% !important;
+    margin-top: -20px !important;
+}
+
+    .custom-nav-btn::after {
+        font-size: 15px !important;
+        font-weight: 900 !important;
+    }
+
+    .custom-nav-btn:hover {
+        background-color: #0072bc !important;
+        color: #fff !important;
+        box-shadow: 0 6px 18px rgba(0, 114, 188, 0.4) !important;
+        transform: scale(1.15);
+    }
+
+.swiper-button-prev.custom-nav-btn {
+    left: -15px !important;
+}
+
+.swiper-button-next.custom-nav-btn {
+    right: -15px !important;
+}
+
+/* TEACHER SECTION (KHỐI 4) */
+.teacher-section-title {
+    color: #ba1f24;
+    font-size: 28px;
+    letter-spacing: 1px;
+}
+
+.subject-tabs-row1 {
+    margin-bottom: -28px;
+    position: relative;
+    z-index: 10;
+}
+
+.subject-tabs-row2 {
+    margin-bottom: 3rem;
+}
+
+.btn-subject {
+    background-color: #ffda44;
+    color: #002060;
+    border: 2px solid #002060;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 10px 28px;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+    .btn-subject:hover, .btn-subject.active {
+        background-color: #002060;
+        color: #ffda44;
+    }
+
+.teacher-main-box {
+    background-color: #ba1f24;
+    border-radius: 2rem;
+    border: 2px solid #002060;
+    padding: 4rem 2.5rem 3rem 2.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.teacher-img-main {
+    border: 6px solid #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.thumb-item {
+    width: 65px;
+    height: 65px;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    opacity: 0.5;
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(255,255,255,0.1);
+}
+
+    .thumb-item:hover {
+        opacity: 0.8;
+    }
+
+    .thumb-item.active {
+        opacity: 1;
+        border: 2px solid #fff;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+/* TAB PANES */
+.subject-pane {
+    display: none;
+    animation: fadeIn 0.6s ease;
+}
+
+    .subject-pane.active {
+        display: block;
+    }
+
+.teacher-info-pane {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+    .teacher-info-pane.active {
+        display: block;
+    }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.teacher-info-box {
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 15px;
+    padding: 1.5rem;
+    background: rgba(0,0,0,0.05);
+}
+
+/* CTA BUTTONS */
+.btn-cta-yellow {
+    background-color: #ffda44;
+    color: #002060;
+    border: none;
+    transition: 0.3s;
+}
+
+    .btn-cta-yellow:hover {
+        background-color: #e5c33a;
+        transform: translateY(-2px);
+    }
+
+.btn-cta-white {
+    background-color: #fff;
+    color: #002060;
+    border: none;
+    transition: 0.3s;
+}
+
+    .btn-cta-white:hover {
+        background-color: #f1f1f1;
+        transform: translateY(-2px);
+    }
+
+
+/* ==========================================
+   TRANG CHI TIẾT KHÓA HỌC (COURSE DETAIL)
+============================================= */
+
+/* Cột phải: Sticky Sidebar */
+.course-sidebar-sticky {
+    position: sticky;
+    top: 20px; /* Cách mép trên 20px khi cuộn */
+    z-index: 100;
+}
+
+.course-price-box {
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.price-original {
+    font-size: 18px;
+    color: #999;
+    text-decoration: line-through;
+}
+
+.price-sale {
+    font-size: 36px;
+    font-weight: 800;
+    color: #222;
+    line-height: 1;
+}
+
+.time-countdown {
+    color: #f36437; /* Màu cam đỏ */
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.btn-orange-outline {
+    background: #fff;
+    color: #f36437;
+    border: 2px solid #f36437;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+    .btn-orange-outline:hover {
+        background: #fff2ee;
+        color: #f36437;
+    }
+
+.btn-orange-fill {
+    background: #f36437;
+    color: #fff;
+    border: 2px solid #f36437;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+    .btn-orange-fill:hover {
+        background: #e55427;
+        color: #fff;
+    }
+
+/* Tabs Chuyển đổi Thông tin / Chương trình */
+.course-nav-tabs {
+    border-bottom: none;
+    gap: 10px;
+}
+
+    .course-nav-tabs .nav-link {
+        border: 1px solid #ddd;
+        color: #555;
+        font-weight: 600;
+        padding: 12px 25px;
+        border-radius: 6px;
+        background: #fff;
+    }
+
+        .course-nav-tabs .nav-link.active {
+            background-color: #fff;
+            color: #1ba2d4;
+            border-color: #1ba2d4;
+            border-bottom: 3px solid #1ba2d4;
+        }
+
+/* Accordion Chương (Thanh màu xanh) */
+.chapter-accordion .accordion-item {
+    border: none;
+    margin-bottom: 8px;
+}
+
+.chapter-accordion .accordion-button {
+    background-color: #1ba2d4; /* Màu xanh nước biển đặc trưng */
+    color: #fff;
+    font-weight: 600;
+    font-size: 16px;
+    border-radius: 4px !important;
+    padding: 12px 20px;
+    box-shadow: none !important;
+}
+
+    .chapter-accordion .accordion-button:not(.collapsed) {
+        background-color: #158dbb;
+        color: #fff;
+    }
+    /* Đổi màu mũi tên Accordion thành trắng */
+    .chapter-accordion .accordion-button::after {
+        filter: brightness(0) invert(1);
+    }
+
+/* Giao diện Timeline bên trong Chương (Các Bài học) */
+.chapter-accordion .accordion-body {
+    padding: 15px 20px;
+    background: #fff;
+}
+
+.timeline-container {
+    border-left: 1px solid #d1d5db; /* Đường kẻ dọc */
+    margin-left: 10px;
+    padding-left: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.timeline-topic {
+    position: relative;
+    margin-bottom: 15px;
+}
+/* Dấu chấm tròn (Node) */
+.timeline-dot {
+    position: absolute;
+    left: -27px; /* Căn giữa đè lên đường kẻ dọc */
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    background-color: #d1d5db;
+    border-radius: 50%;
+}
+/* Tiêu đề Bài */
+.topic-header {
+    cursor: pointer;
+    font-weight: 600;
+    color: #444;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+    .topic-header:hover {
+        color: #1ba2d4;
+    }
+
+    .topic-header .chevron-icon {
+        transition: transform 0.3s;
+        font-size: 12px;
+        color: #888;
+    }
+
+    .topic-header[aria-expanded="true"] .chevron-icon {
+        transform: rotate(180deg);
+    }
+
+/* Box Nội dung học (Video / Bài tập) */
+.lesson-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin-top: 10px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    color: #555;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+    .lesson-box:hover {
+        border-color: #f36437; /* Viền cam khi hover */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        color: #f36437;
+    }
+
+    .lesson-box .lesson-icon {
+        color: #aaa;
+        width: 25px;
+    }
+
+    .lesson-box:hover .lesson-icon {
+        color: #f36437;
+    }
+
+    .lesson-box .arrow-icon {
+        color: #f36437;
+        font-size: 14px;
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: 0.3s;
+    }
+
+    .lesson-box:hover .arrow-icon {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+/* ==========================================
+   TRANG HỌC TẬP & THI (LMS STUDY PAGE)
+============================================= */
+.lms-wrapper {
+    background-color: #f4f6f8;
+    min-height: calc(100vh - 60px);
+    padding-top: 20px;
+    padding-bottom: 50px;
+}
+
+/* CỘT TRÁI: Danh sách bài học */
+.lms-sidebar {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    height: calc(100vh - 100px);
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.lms-sidebar-header {
+    background: #fff;
+    padding: 15px;
+    border-bottom: 2px solid #eee;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.lms-sidebar-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Tùy chỉnh Accordion cho Cột Trái */
+.lms-accordion .accordion-button {
+    font-weight: 600;
+    color: #333;
+    background-color: #f8f9fa;
+    padding: 12px 15px;
+    box-shadow: none !important;
+}
+
+    .lms-accordion .accordion-button:not(.collapsed) {
+        background-color: #e9ecef;
+        color: #0072bc;
+    }
+
+.lms-lesson-item {
+    display: block;
+    padding: 10px 15px 10px 35px;
+    color: #555;
+    text-decoration: none;
+    border-bottom: 1px solid #f1f1f1;
+    transition: 0.2s;
+    font-size: 14px;
+}
+
+    .lms-lesson-item:hover, .lms-lesson-item.active {
+        background-color: #fff2ee;
+        color: #f36437;
+        border-left: 4px solid #f36437;
+        padding-left: 31px; /* Trừ đi 4px border để text không bị giật */
+    }
+
+/* CỘT GIỮA: Video & Câu hỏi thi */
+.lms-video-container {
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    padding-bottom: 56.25%; /* Tỉ lệ 16:9 */
+    height: 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+    .lms-video-container iframe, .lms-video-container video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+/* Giao diện Câu hỏi thi */
+.quiz-question-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-left: 4px solid #f36437;
+}
+
+.quiz-badge {
+    background-color: #00a859;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+/* Tùy chỉnh Radio Button Trắc nghiệm */
+.quiz-option {
+    display: block;
+    padding: 10px 15px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+    .quiz-option:hover {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .quiz-option input[type="radio"] {
+        margin-right: 10px;
+        accent-color: #f36437;
+        transform: scale(1.2);
+    }
+
+/* CỘT PHẢI: Bảng theo dõi thi (Sticky Tracker) */
+.quiz-tracker-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 20px;
+}
+
+.tracker-stats {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+    .tracker-stats .stat-value {
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    .tracker-stats .stat-label {
+        font-size: 12px;
+        color: #777;
+    }
+
+.tracker-timer {
+    color: #0072bc;
+}
+
+/* Lưới nút bấm câu hỏi */
+.question-palette {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Căn giữa mảng nút */
+    gap: 8px; /* Khoảng cách giữa các nút */
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 5px;
+    margin-bottom: 20px;
+}
+
+.palette-btn {
+    flex: 0 0 38px; /* Ép cứng chiều rộng tuyệt đối là 38px */
+    height: 38px; /* Ép cứng chiều cao tuyệt đối là 38px */
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #555;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    padding: 0; /* Triệt tiêu padding mặc định của nút */
+}
+
+    .palette-btn:hover {
+        border-color: #999;
+    }
+
+    .palette-btn.done {
+        background-color: #00a859;
+        color: #fff;
+        border-color: #00a859;
+    }
+
+    .palette-btn.review {
+        background-color: #a069c3;
+        color: #fff;
+        border-color: #a069c3;
+    }
+
+/* Ghi chú màu sắc */
+.tracker-legend .legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.tracker-legend .dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.dot-done {
+    background-color: #00a859;
+}
+
+.dot-empty {
+    border: 1px solid #ddd;
+    background: #fff;
+}
+
+.dot-review {
+    background-color: #a069c3;
+}

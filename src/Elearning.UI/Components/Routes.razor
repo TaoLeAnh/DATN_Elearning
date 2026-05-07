@@ -1,0 +1,76 @@
+﻿@using Elearning.UI.Application
+@using Elearning.UI.Components.Shared
+@inject NavigationManager Nav
+@inject IModuleRegistry Registry
+@inject ModuleTypeState TypeState
+
+<FluentDesignTheme StorageName="theme" />
+
+<CascadingAuthenticationState>
+    @* Đã bổ sung OnNavigateAsync và AdditionalAssemblies để hàm HandleNavAsync của bạn hoạt động *@
+    <Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="@_additional" OnNavigateAsync="HandleNavAsync">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                
+                @* --- PHẦN THAY ĐỔI CHÍNH NẰM Ở ĐÂY --- *@
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        @* Kích hoạt Component tự động đá về trang Login *@
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        @* Giao diện báo lỗi nếu đã đăng nhập nhưng không có quyền *@
+                        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                            <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                <h2 style="color: #dc3545; margin-bottom: 10px;">Truy cập bị từ chối ⛔</h2>
+                                <p style="color: #6c757d;">Tài khoản của bạn không có quyền truy cập vào khu vực này.</p>
+                                <a href="/account/logout" style="color: #0d6efd; text-decoration: none; margin-top: 20px; display: inline-block;">Đăng xuất và thử lại</a>
+                            </div>
+                        </div>
+                    }
+                </NotAuthorized>
+                @* ---------------------------------------- *@
+
+                <Authorizing>
+                    <div style="padding: 20px;">Đang kiểm tra quyền truy cập...</div>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Không tìm thấy trang</PageTitle>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <div style="padding: 20px;">
+                    <p role="alert">Trang này không tồn tại hoặc đã bị xóa.</p>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    private List<System.Reflection.Assembly> _additional = new();
+
+    private Task HandleNavAsync(NavigationContext ctx)
+    {
+        var assemblies = Registry.GetByType(TypeState.Current)
+                                 .SelectMany(m => m.GetRouteAssemblies())
+                                 .Distinct()
+                                 .ToList();
+        _additional = assemblies; // WASM có thể dùng LazyAssemblyLoader để load dynamic
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public static string PageTitle(string page)
+    {
+        return $"{page} - Quản lý lưu trữ";
+    }
+
+    public const string MESSAGES_NOTIFICATION_CENTER = "NOTIFICATION_CENTER";
+    public const string MESSAGES_TOP = "TOP";
+    public const string MESSAGES_DIALOG = "DIALOG";
+    public const string MESSAGES_CARD = "CARD";
+}

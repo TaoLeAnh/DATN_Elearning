@@ -1,0 +1,95 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết Ma trận Đề thi</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="12"><b>Tên Ma trận:</b> <div>@Item.TenMaTran</div></FluentGridItem>
+            <FluentGridItem md="6"><b>Môn học:</b> <div>@Item.MonHoc.GetDescription()</div></FluentGridItem>
+            <FluentGridItem md="6">
+                <b>Trạng thái:</b>
+                <div>
+                    @(Item.IsActive ? "Đang làm cấu hình mặc định" : "Không kích hoạt")
+                </div>
+            </FluentGridItem>
+
+            <FluentGridItem md="12">
+                <b>Cấu trúc quy tắc (Tổng @Item.ChiTiets.Sum(x => x.SoLuong) câu):</b>
+                <div style="border: 1px solid #eee; padding: 10px; margin-top: 10px; max-height: 300px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #ccc; background: #fafafa;">
+                                <th style="padding: 8px;">Phần thi</th>
+                                <th style="padding: 8px;">Mức độ</th>
+                                <th style="padding: 8px;">Chủ đề</th>
+                                <th style="padding: 8px;">Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Item.ChiTiets)
+                            {
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 8px;">@c.PhanThi.GetDescription()</td>
+                                    <td style="padding: 8px;">@c.MucDo.GetDescription()</td>
+                                    <td style="padding: 8px;">@(string.IsNullOrEmpty(c.ChuDe) ? "Tổng hợp (Random)" : c.ChuDe)</td>
+                                    <td style="padding: 8px; font-weight: bold; color: #1e73be;">@c.SoLuong</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </FluentGridItem>
+        </FluentGrid>
+    }
+    else
+    {
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    private MaTranDeThiMacDinhDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/MaTranDeThiMacDinh/{Content.Id}",
+                HasAuthorization = true
+            };
+
+            var res = await CallService.Get<MaTranDeThiMacDinhDto>(req);
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                Item = res.Data;
+            }
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

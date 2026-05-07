@@ -1,0 +1,172 @@
+﻿@page "/account/login"
+@using System.ComponentModel.DataAnnotations
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Commons.Enums
+@using Elearning.Shared.Commons.Model.Commons
+@using Microsoft.AspNetCore.Components.Web
+
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@inject NavigationManager NavigationManager
+@inject ICallServiceRegistry CallService
+@layout Layout.EmptyLayout
+
+<div class="ms-login-page">
+    <div class="ms-login-card-container">
+        <FluentCard Class="ms-login-card" MinimalStyle="true">
+            <div class="ms-login-header">
+                <div class="ms-login-logo">
+                    HỆ THỐNG QUẢN LÝ - <span>PORTAL</span>
+                </div>
+                <h1 class="ms-login-title">Sign in</h1>
+            </div>
+
+            <EditForm EditContext="@editContext" OnValidSubmit="LoginUser">
+                <DataAnnotationsValidator />
+
+                <FluentStack Orientation="Orientation.Vertical" Style="width:100%; gap:12px;min-width:400px">
+                    <FluentTextField @bind-Value="Input.Email"
+                                     Autofocus="true"
+                                     AutoComplete="off"
+                                     Required="true"
+                                     Placeholder="Email, phone, or username"
+                                     Style="width: 100%"
+                                     @onkeyup="HandleEnter" />
+                    <FluentValidationMessage For="() => Input.Email" class="ms-login-validation" />
+
+                    <FluentTextField type="password"
+                                     @bind-Value="Input.Password"
+                                     AutoComplete="off"
+                                     Required="true"
+                                     Placeholder="Password"
+                                     Style="width: 100%"
+                                     @onkeyup="HandleEnter" />
+                    <FluentValidationMessage For="() => Input.Password" class="ms-login-validation" />
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div style="color: #a80000; font-size: 13px; margin-top: 5px; padding: 10px; background-color: #fde7e9; border-radius: 4px;">
+                            @errorMessage
+                        </div>
+                    }
+
+                    <FluentButton Type="ButtonType.Submit"
+                                  Appearance="Appearance.Accent"
+                                  Style="width: 100%; margin-top:16px; height:40px;"
+                                  Loading="@IsLoading">
+                        <span class="btn-content">
+                            <span>Sign in</span>
+                            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowRight())" Color="Color.Custom" CustomColor="white" />
+                        </span>
+                    </FluentButton>
+                </FluentStack>
+            </EditForm>
+        </FluentCard>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+    private bool IsLoading = false;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private InputModel Input { get; set; } = new();
+    private EditContext editContext = default!;
+
+    protected override void OnInitialized()
+    {
+        // Khởi tạo EditContext để quản lý Validation thủ công
+        editContext = new EditContext(Input);
+    }
+
+    // Hàm bắt sự kiện nhấn phím Enter
+    private async Task HandleEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            // Ép hệ thống kiểm tra Validation, nếu Pass thì gọi API
+            if (editContext.Validate())
+            {
+                await LoginUser();
+            }
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        errorMessage = null;
+        IsLoading = true;
+
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = "/Auth/login",
+                HasAuthorization = false
+            };
+
+            var response = await CallService.Post<AuthResponseDto>(req, new
+            {
+                Email = Input.Email,
+                Password = Input.Password
+            });
+
+            if (response.Status != StatusCode.OK || response.Data == null)
+            {
+                errorMessage = "Email hoặc mật khẩu không chính xác.";
+                return;
+            }
+
+            var user = response.Data;
+
+            if (user.VaiTro != "Admin" && user.VaiTro != "GiangVien")
+            {
+                errorMessage = "Truy cập bị từ chối. Chỉ dành cho Admin hoặc Giảng viên.";
+                return;
+            }
+
+            var url = $"/account/do-login" +
+                      $"?id={Uri.EscapeDataString(user.Id.ToString())}" +
+                      $"&ten={Uri.EscapeDataString(user.Ten ?? "")}" +
+                      $"&email={Uri.EscapeDataString(user.Email)}" +
+                      $"&vaitro={Uri.EscapeDataString(user.VaiTro)}" +
+                      $"&token={Uri.EscapeDataString(user.Token)}" +
+                      $"&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/nghiep-vu/quan-ly-ky-thi")}";
+
+            NavigationManager.NavigateTo(url, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi hệ thống: " + ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập Email")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Vui lòng nhập Password")]
+        public string Password { get; set; } = "";
+    }
+
+    public class AuthResponseDto
+    {
+        public Guid Id { get; set; }
+        public string Ten { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string VaiTro { get; set; } = "";
+        public string Token { get; set; } = "";
+    }
+}

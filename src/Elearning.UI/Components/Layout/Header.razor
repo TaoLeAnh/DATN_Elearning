@@ -1,0 +1,169 @@
+﻿@using Elearning.Shared.Commons.Model.Commons
+@using Elearning.UI.Components.Layout.Component
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+<style>
+    .face {
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        border: 1px solid silver;
+    }
+
+    #PopoverUser {
+        font-weight: normal;
+        color: var(--neutral-foreground-rest);
+    }
+
+    .home-link {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+    }
+
+    .home-link__icon {
+        flex-shrink: 0;
+    }
+
+    .home-link__text {
+        text-transform: uppercase;
+        margin-left: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+</style>
+
+<a href="nghiep-vu/ban-lam-viec" class="home-link" aria-label="Quay về trang chủ">
+    <!-- Icon -->
+    <img src="img/logo-pm.svg"
+         width="23"
+         height="23"
+         alt="Logo Bộ Y Tế"
+         class="home-link__icon" />
+    <!-- Text bên cạnh -->
+    <span class="home-link__text">Phần mềm quản trị nội dung - Cổng Thông Tin</span>
+</a>
+
+<FluentSpacer />
+
+
+
+
+
+@* <a href="nghiep-vu/ban-lam-viec">
+    <div id="module-nghiep-vu">
+        <FluentButton BackgroundColor="var(--neutral-layer-4)" Title="Nghiệp vụ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Briefcase())" />
+        </FluentButton>
+    </div>
+    <FluentTooltip Anchor="module-nghiep-vu">
+        Di chuyển vào module nghiệp vụ
+    </FluentTooltip>
+</a>
+
+<a href="quan-tri-he-thong/ban-lam-viec">
+    <div id="module-quan-tri-he-thong">
+        <FluentButton BackgroundColor="var(--neutral-layer-4)">
+            <FluentIcon Value="@(new Icons.Regular.Size24.SettingsCogMultiple())" />
+
+        </FluentButton>
+    </div>
+
+    <FluentTooltip Anchor="module-quan-tri-he-thong">
+        Di chuyển vào quản trị hệ thống <br />
+        Quản lý toàn bộ tham số hệ thống ( người dùng, phân quyền,...)
+    </FluentTooltip>
+</a>
+
+<a href="module-khac/ban-lam-viec">
+    <div id="module-khac">
+        <FluentButton BackgroundColor="var(--neutral-layer-4)" Title="Khác">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Apps())" />
+        </FluentButton>
+    </div>
+
+    <FluentTooltip Anchor="module-khac">
+        Di chuyển vào module khác
+    </FluentTooltip>
+</a> *@
+
+@* <FluentDivider Role="DividerRole.Presentation" Orientation="Orientation.Vertical"></FluentDivider> *@
+
+
+<div class="notifications">
+    <NotificationCenter />
+</div>
+<div class="settings">
+    <SiteSettings />
+</div>
+<div class="User" style="margin-right:10px">
+    <FluentStack HorizontalAlignment="@HorizontalAlignment.End"
+                 VerticalAlignment="@VerticalAlignment.Center"
+                 Style="height: 48px; background: var(--neutral-layer-4); padding-inline-end: 10px; ">
+
+        @* SỬA Ở ĐÂY: Hiển thị FullName thay vì UserName *@
+        <FluentProfileMenu HeaderButton="Đăng xuất"
+                           OnHeaderButtonClick="@LogoutAction"
+                           FullName="@(string.IsNullOrEmpty(CurrentUser.FullName) ? CurrentUser.UserName : CurrentUser.FullName)"
+                           EMail="@CurrentUser.Email"
+                           PopoverStyle="min-width: 330px;">
+
+            <FooterTemplate>
+                <FluentStack>
+                    <FluentSpacer />
+                    <FluentAnchor Appearance="@Appearance.Hypertext" Href="#"
+                                  OnClick="@(() => OpenUserDialog(CurrentUser.UserId))">
+                        Xem tài khoản
+                    </FluentAnchor>
+                </FluentStack>
+            </FooterTemplate>
+        </FluentProfileMenu>
+    </FluentStack>
+</div>
+
+@code {
+
+    [Inject] IDialogService DialogService { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+
+    [CascadingParameter]
+    protected CurrentUserDto CurrentUser { set; get; } = new();
+
+
+
+    private async Task OpenUserDialog(Guid Id)
+    {
+        try
+        {
+
+
+            var dialog = await DialogService.ShowDialogAsync<InfoUser>(Id, new DialogParameters()
+            {
+                Title = "Thông tin người dùng",
+                PreventDismissOnOverlayClick = true,
+                PreventScroll = true,
+                Modal = true,
+
+            });
+
+
+        }
+        catch (Exception ex)
+        {
+            var dialog = await DialogService.ShowErrorAsync(ex.Message);
+        }
+    }
+
+    private async Task LogoutAction()
+    {
+        try
+        {
+            NavigationManager.NavigateTo("account/logout", true);
+        }
+        catch (Exception ex)
+        {
+            var dialog = await DialogService.ShowErrorAsync(ex.Message);
+        }
+    }
+}

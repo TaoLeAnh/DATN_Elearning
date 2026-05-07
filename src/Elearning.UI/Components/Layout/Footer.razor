@@ -1,0 +1,78 @@
+﻿@using Elearning.Shared.Commons.Model.Extentions.Redis
+@using Elearning.Shared.Commons.Interfaces.Extentions
+
+@inherits ComponentBase;
+<p>
+    @AppVersion
+</p>
+<FluentSpacer />
+<p>
+    @AppInformation
+</p>
+
+
+
+@code {
+
+    [Inject] ICacheService CacheService { get; set; } = default!;
+    [Inject] ICallServiceRegistry CallServiceRegistry { get; set; } = default!;
+
+    private string AppVersion { get; set; } = string.Empty;
+    private string AppInformation { get; set; } = string.Empty;
+
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                var task1 = CacheService.GetAsync<string>(RedisTypeKey.SystemConfiguration, RedisKeys.AppVersion);
+
+                var task2 = CacheService.GetAsync<string>(RedisTypeKey.SystemConfiguration, RedisKeys.AppInformation);
+                await Task.WhenAll(task1, task2);
+
+                AppVersion = await task1 ?? "";
+                AppInformation = await task2 ?? "";
+
+                StateHasChanged();
+            }
+
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Co loi trong qua trinh lay app infor voi version tronng cache");
+
+        }
+    }
+
+
+
+
+
+
+}
+
+<style>
+    footer {
+        background: var(--neutral-layer-4);
+        color: var(--neutral-foreground-rest);
+        align-items: center;
+        padding: 10px 10px;
+    }
+
+        footer a {
+            color: var(--neutral-foreground-rest);
+            text-decoration: none;
+        }
+
+            footer a:focus {
+                outline: 1px dashed;
+                outline-offset: 3px;
+            }
+
+            footer a:hover {
+                text-decoration: underline;
+            }
+</style>

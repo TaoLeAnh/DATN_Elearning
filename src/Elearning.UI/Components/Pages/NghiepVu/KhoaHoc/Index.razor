@@ -1,0 +1,61 @@
+﻿@page "/nghiep-vu/quan-ly-khoa-hoc"
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Danh sách Khóa Học</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" Title="Thêm mới" OnClick="OpenAddModal" Loading="@IsLoadingSync">Thêm mới</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Nhập tên khóa học..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true" 
+                    @ref="Grid" 
+                    TGridItem="KhoaHocDto" 
+                    ItemsProvider="LoadDatas" 
+                    GridTemplateColumns="1fr 4fr 4fr 3fr 2fr" 
+                    RowSize="DataGridRowSize.Large" 
+                    Style="width:100%;" 
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">
+            @context.STT
+        </TemplateColumn>
+
+        <TemplateColumn Title="Tên khóa học" Sortable="true" SortBy="@_roleTenKhoaHocSort">
+            <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                @context.TenKhoaHoc
+            </span>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Mô tả" Sortable="false">
+            @context.MoTa
+        </TemplateColumn>
+
+        <TemplateColumn Title="Môn học" Sortable="true">
+            <FluentBadge Appearance="Appearance.Neutral">@GetTenMonHoc(context.MonHoc)</FluentBadge>
+        </TemplateColumn>
+
+        @* <TemplateColumn Title="Giảng viên (ID)" Sortable="false">
+            @context.GiangVienId
+        </TemplateColumn> *@
+
+        <TemplateColumn Title="Thao tác" Style="display: flex; justify-content: flex-end;">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Loading="@IsLoadingSync" Appearance="Appearance.Outline" Title="Chỉnh sửa" OnClick="@(() => EditAction(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                </FluentButton>
+
+                <FluentButton Title="Xóa" Appearance="Appearance.Outline" OnClick="()=>OpenModalDelete(context.Id)">
+                   <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+               </FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

@@ -1,0 +1,301 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Extensions  @* THÊM DÒNG NÀY ĐỂ DÙNG GetDescription() *@
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Dtos.KyThi
+@using Elearning.Shared.Contracts.Portal.Forms.KyThi
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="12">
+                    <FluentTextField @bind-Value="ModelForm.TenKyThi" Label="Tên kỳ thi (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.TenKyThi)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentSwitch @bind-Value="ModelForm.IsPublic" Label="Đề thi mở công khai (Không thuộc khóa học)" />
+                </FluentGridItem>
+
+                @if (ModelForm.IsPublic)
+                {
+                    <FluentGridItem md="4">
+                        <FluentSelect @bind-Value="MonHocString" Label="Môn học" TOption="string" Style="width: 100%;">
+                            <FluentOption Value="">-- Chọn môn --</FluentOption>
+                            @foreach (Enum item in Enum.GetValues(typeof(MonHocEnum)))
+                            {
+                                // SỬ DỤNG GetDescription() THAY VÌ ToString()
+                                <FluentOption Value="@(Convert.ToInt32(item).ToString())">@item.GetDescription()</FluentOption>
+                            }
+                        </FluentSelect>
+                    </FluentGridItem>
+
+                    <FluentGridItem md="4">
+                        <FluentSelect @bind-Value="LoaiDeString" Label="Loại đề thi" TOption="string" Style="width: 100%;">
+                            <FluentOption Value="">-- Chọn loại --</FluentOption>
+                            @foreach (Enum item in Enum.GetValues(typeof(EnumLoaiDeThi)))
+                            {
+                                // SỬ DỤNG GetDescription() THAY VÌ ToString()
+                                <FluentOption Value="@(Convert.ToInt32(item).ToString())">@item.GetDescription()</FluentOption>
+                            }
+                        </FluentSelect>
+                    </FluentGridItem>
+
+                    <FluentGridItem md="4">
+                        <FluentNumberField @bind-Value="ModelForm.NamThi" Label="Năm thi" Placeholder="Ví dụ: 2026" Style="width: 100%;" />
+                    </FluentGridItem>
+
+                    <FluentGridItem md="6">
+                        <FluentTextField @bind-Value="ModelForm.TinhThanh" Label="Tỉnh/Thành phố" Placeholder="Sở GD Hà Nội..." Style="width: 100%;" />
+                    </FluentGridItem>
+
+                    <FluentGridItem md="6">
+                        <FluentTextField @bind-Value="ModelForm.TenTruong" Label="Tên Trường" Placeholder="THPT Chuyên KHTN..." Style="width: 100%;" />
+                    </FluentGridItem>
+                }
+                else
+                {
+                    <FluentGridItem md="12">
+                        <FluentAutocomplete TOption="KhoaHocOption"
+                                            Label="Thuộc khóa học (*)"
+                                            OnOptionsSearch="OnSearchKhoaHoc"
+                                            OptionText="@(item => item.TenKhoaHoc)"
+                                            @bind-SelectedOptions="SelectedKhoaHocs"
+                                            MaximumSelectedOptions="1"
+                                            Placeholder="Gõ để tìm tên khóa học..."
+                                            Style="width: 100%;" />
+                        <ValidationMessage For="@(() => ModelForm.KhoaHocId)" Style="color:red;" />
+                    </FluentGridItem>
+                }
+
+                @* KHỐI HIỂN THỊ THỜI GIAN: HIỂN THỊ KHI ĐỀ NỘI BỘ HOẶC LÀ THI TRỰC TIẾP (LIVE) *@
+                @if (!ModelForm.IsPublic || ModelForm.LoaiDeThi == EnumLoaiDeThi.DeThiLive)
+                {
+                    <FluentGridItem md="6">
+                        <label style="display:block; margin-bottom: 4px; font-size: 14px;">Thời gian bắt đầu (*)</label>
+                        <input type="datetime-local" @bind="ModelForm.ThoiGianBatDau" style="width: 100%; padding: 6px 10px; border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; height: 32px;" />
+                    </FluentGridItem>
+
+                    <FluentGridItem md="6">
+                        <label style="display:block; margin-bottom: 4px; font-size: 14px;">Thời gian kết thúc (*)</label>
+                        <input type="datetime-local" @bind="ModelForm.ThoiGianKetThuc" style="width: 100%; padding: 6px 10px; border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; height: 32px;" />
+                    </FluentGridItem>
+                }
+
+                <FluentGridItem md="12">
+                    <FluentNumberField @bind-Value="ModelForm.ThoiLuongPhut" Label="Thời lượng (phút) (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.ThoiLuongPhut)" Style="color:red;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu kỳ thi</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private KyThiForm ModelForm = new() { IsPublic = true };
+
+    private string MonHocString
+    {
+        get => ModelForm.MonHoc.HasValue ? ((int)ModelForm.MonHoc.Value).ToString() : "";
+        set => ModelForm.MonHoc = string.IsNullOrEmpty(value) ? null : (MonHocEnum)int.Parse(value);
+    }
+
+    private string LoaiDeString
+    {
+        get => ModelForm.LoaiDeThi.HasValue ? ((int)ModelForm.LoaiDeThi.Value).ToString() : "";
+        set => ModelForm.LoaiDeThi = string.IsNullOrEmpty(value) ? null : (EnumLoaiDeThi)int.Parse(value);
+    }
+
+    public class KhoaHocOption
+    {
+        public Guid Id { get; set; }
+        public string TenKhoaHoc { get; set; } = string.Empty;
+    }
+
+    private IEnumerable<KhoaHocOption> _selectedKhoaHocs = new List<KhoaHocOption>();
+    private IEnumerable<KhoaHocOption> SelectedKhoaHocs
+    {
+        get => _selectedKhoaHocs;
+        set
+        {
+            _selectedKhoaHocs = value;
+            ModelForm.KhoaHocId = _selectedKhoaHocs.FirstOrDefault()?.Id;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KyThi/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<KyThiDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm = new KyThiForm
+                    {
+                        TenKyThi = res.Data.TenKyThi,
+                        KhoaHocId = res.Data.KhoaHocId,
+                        ThoiGianBatDau = res.Data.ThoiGianBatDau,
+                        ThoiGianKetThuc = res.Data.ThoiGianKetThuc,
+                        ThoiLuongPhut = res.Data.ThoiLuongPhut,
+                        MonHoc = res.Data.MonHoc,
+                        LoaiDeThi = res.Data.LoaiDeThi,
+                        NamThi = res.Data.NamThi,
+                        TinhThanh = res.Data.TinhThanh,
+                        TenTruong = res.Data.TenTruong,
+                        IsPublic = res.Data.IsPublic
+                    };
+
+                    if (ModelForm.KhoaHocId.HasValue && ModelForm.KhoaHocId.Value != Guid.Empty)
+                    {
+                        var reqC = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KhoaHoc/{ModelForm.KhoaHocId}", HasAuthorization = true };
+                        var resC = await CallService.Get<KhoaHocDto>(reqC);
+                        if (resC.Data != null)
+                        {
+                            _selectedKhoaHocs = new List<KhoaHocOption> {
+                                new KhoaHocOption { Id = resC.Data.Id, TenKhoaHoc = resC.Data.TenKhoaHoc }
+                            };
+                        }
+                    }
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchKhoaHoc(OptionsSearchEventArgs<KhoaHocOption> e)
+    {
+        var query = new { SearchText = e.Text, PageIndex = 1, PageSize = 20 };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/KhoaHoc/getpaged", HasAuthorization = true };
+
+        var res = await CallService.Post<DataTableJson<KhoaHocDto>>(req, query);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new KhoaHocOption
+            {
+                Id = x.Id,
+                TenKhoaHoc = x.TenKhoaHoc
+            }).ToList();
+        }
+    }
+
+    private async Task Save()
+    {
+        bool requiresTime = !ModelForm.IsPublic || ModelForm.LoaiDeThi == EnumLoaiDeThi.DeThiLive;
+
+        // Custom Validation
+        if (!ModelForm.IsPublic)
+        {
+            if (ModelForm.KhoaHocId == null || ModelForm.KhoaHocId == Guid.Empty)
+            {
+                ToastService.ShowWarning("Vui lòng chọn khóa học cho đề thi nội bộ.");
+                return;
+            }
+        }
+        else
+        {
+            ModelForm.KhoaHocId = null; // Đề public thì không lưu khóa học
+        }
+
+        if (requiresTime)
+        {
+            if (ModelForm.ThoiGianBatDau == null || ModelForm.ThoiGianKetThuc == null)
+            {
+                ToastService.ShowWarning("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.");
+                return;
+            }
+            if (ModelForm.ThoiGianKetThuc <= ModelForm.ThoiGianBatDau)
+            {
+                ToastService.ShowWarning("Thời gian kết thúc phải sau thời gian bắt đầu.");
+                return;
+            }
+        }
+        else
+        {
+            // Các loại đề public làm tự do sẽ được set null thời gian để không lọt rác vào DB
+            ModelForm.ThoiGianBatDau = null;
+            ModelForm.ThoiGianKetThuc = null;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/KyThi/{Content.Id}" : "/KyThi",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

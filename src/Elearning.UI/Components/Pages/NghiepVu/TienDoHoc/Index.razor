@@ -1,0 +1,51 @@
+﻿@page "/nghiep-vu/quan-ly-tien-do"
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Lịch sử Tiến độ học</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" OnClick="OpenAddModal" Loading="@IsLoadingSync">Thêm mới</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Tìm tên bài học..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true" @ref="Grid" TGridItem="TienDoHocDto" ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 25% 30% 15% 15% 10%" RowSize="DataGridRowSize.Large" Style="width:100%;" Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+        <PropertyColumn Title="Học viên" Property="@(c => c.TenNguoiDung)" Sortable="true" />
+
+        <TemplateColumn Title="Bài học" Sortable="true">
+            <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                @context.TieuDeBaiHoc
+            </span>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Hoàn thành" Sortable="true">
+            @if (context.DaHoanThanh)
+            {
+                <FluentBadge Appearance="Appearance.Accent">Đã xong</FluentBadge>
+            }
+            else
+            {
+
+                <FluentBadge Appearance="Appearance.Neutral">Chưa xong</FluentBadge>
+            }
+        </TemplateColumn>
+
+        <PropertyColumn Title="TG Hoàn thành" Property="@(c => c.ThoiDiemHoanThanh.HasValue ? c.ThoiDiemHoanThanh.Value.ToString("dd/MM/yyyy HH:mm") : "")" Sortable="false" />
+
+        <TemplateColumn Title="Thao tác" Align="Align.End">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Outline" OnClick="@(() => EditAction(context.Id))"><FluentIcon Value="@(new Icons.Regular.Size16.Edit())" /></FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="() => OpenModalDelete(context.Id)"><FluentIcon Value="@(new Icons.Regular.Size16.Delete())" /></FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

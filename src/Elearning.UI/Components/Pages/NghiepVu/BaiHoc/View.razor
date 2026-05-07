@@ -1,0 +1,73 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết bài học</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="12"><b>Tiêu đề:</b> <div>@Item.TieuDe</div></FluentGridItem>
+            <FluentGridItem md="6"><b>Chương học:</b> <div>@Item.TenChuong</div></FluentGridItem>
+            <FluentGridItem md="6"><b>Loại bài:</b> <div>@Item.Loai.GetDescription()</div></FluentGridItem>
+            <FluentGridItem md="6"><b>Thời lượng:</b> <div>@Item.ThoiLuong phút</div></FluentGridItem>
+            @if (!string.IsNullOrEmpty(Item.VideoUrl))
+            {
+                <FluentGridItem md="12"><b>Video URL:</b> <a href="@Item.VideoUrl" target="_blank">@Item.VideoUrl</a></FluentGridItem>
+            }
+            <FluentGridItem md="12"><b>Nội dung văn bản:</b> <div style="border: 1px solid #eee; padding: 10px;">@((MarkupString)Item.NoiDung)</div></FluentGridItem>
+        </FluentGrid>
+    }
+    else
+    {
+
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    private BaiHocDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            // Bổ sung HasAuthorization = true vào đây
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal, // Đảm bảo có ApiService nếu CallService yêu cầu
+                Endpoint = $"/BaiHoc/{Content.Id}",
+                HasAuthorization = true
+            };
+
+            var res = await CallService.Get<BaiHocDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                Item = res.Data;
+            }
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

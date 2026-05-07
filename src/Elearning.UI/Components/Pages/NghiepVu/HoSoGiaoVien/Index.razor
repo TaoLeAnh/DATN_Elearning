@@ -1,0 +1,70 @@
+﻿@page "/nghiep-vu/ho-so-giao-vien"
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Hồ sơ Giáo viên</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" OnClick="OpenAddModal" Loading="@IsLoadingSync">Thêm mới hồ sơ</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Tìm theo tên giáo viên..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="HoSoGiaoVienDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 10% 25% 15% 35% 10%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+
+        <TemplateColumn Title="Ảnh" Sortable="false">
+            @if (!string.IsNullOrEmpty(context.AnhDaiDienUrl))
+            {
+                <img src="@context.AnhDaiDienUrl" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />
+            }
+            else
+            {
+                <FluentIcon Value="@(new Icons.Regular.Size32.Person())" />
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Tên giáo viên" Sortable="true" SortBy="@_roleTieuDeSort">
+            <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                @context.TenGiaoVien
+            </span>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Chuyên môn" Sortable="true">
+            <FluentBadge Appearance="Appearance.Neutral">
+                @context.MonHocChuyenMon.GetDescription()
+            </FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thành tích nổi bật" Sortable="false">
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">
+                @context.ThanhTichNoiBat
+            </div>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thao tác" Align="Align.End">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Outline" OnClick="@(() => EditAction(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="() => OpenModalDelete(context.Id)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                </FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

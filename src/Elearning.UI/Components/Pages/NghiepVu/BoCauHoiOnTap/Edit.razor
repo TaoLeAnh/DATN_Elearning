@@ -1,0 +1,383 @@
+﻿@page "/nghiep-vu/quan-ly-bo-cau-hoi/edit"
+@page "/nghiep-vu/quan-ly-bo-cau-hoi/edit/{Id:guid}"
+
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Commons.Querys.Grid
+@using Elearning.Shared.Commons.Querys.ModalQuery
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.Shared.Commons.Extensions
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Stealth" IconStart="@(new Icons.Regular.Size24.ArrowLeft())" OnClick="GoBack">Quay lại</FluentButton>
+    <h2>@(Id == null ? "Tạo mới Bộ câu hỏi" : "Chỉnh sửa Bộ câu hỏi")</h2>
+</FluentStack>
+
+@if (!IsLoading)
+{
+    <EditForm Model="@ModelForm" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+
+        <FluentGrid Spacing="3">
+            @* CỘT TRÁI: THÔNG TIN CHUNG CỦA BỘ CÂU HỎI *@
+            <FluentGridItem md="5">
+                <FluentCard Style="height: 100%; padding: 20px;">
+                    <h3 style="margin-top:0;">Thông tin chung</h3>
+                    <FluentGrid Spacing="2">
+                        <FluentGridItem md="12">
+                            <FluentTextField @bind-Value="ModelForm.TenBo" Label="Tên bộ câu hỏi (*)" Style="width: 100%;" />
+                            <ValidationMessage For="@(() => ModelForm.TenBo)" Style="color:red;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <FluentTextArea @bind-Value="ModelForm.MoTa" Label="Mô tả" Rows="3" Style="width: 100%;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="6">
+                            <FluentSelect Label="Loại bộ câu hỏi (*)"
+                                          Items="@LoaiBoCauHoiOptions"
+                                          OptionText="@(i => i.Name)"
+                                          OptionValue="@(i => i.Id.ToString())"
+                                          @bind-SelectedOption="SelectedLoaiBoCauHoi"
+                                          Style="width: 100%;" />
+                            <ValidationMessage For="@(() => ModelForm.LoaiBoCauHoi)" Style="color:red;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="6">
+                            <FluentNumberField @bind-Value="ModelForm.ThoiLuongPhut" Label="Thời gian làm bài (Phút) (*)" Min="1" Style="width: 100%;" />
+                            <ValidationMessage For="@(() => ModelForm.ThoiLuongPhut)" Style="color:red;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <FluentAutocomplete TOption="KhoaHocOption"
+                                                Label="Thuộc Khóa học (*)"
+                                                OnOptionsSearch="OnSearchKhoaHoc"
+                                                OptionText="@(item => item.Name)"
+                                                SelectedOptions="@_selectedKhoaHocs"
+                                                SelectedOptionsChanged="OnKhoaHocChanged"
+                                                MaximumSelectedOptions="1"
+                                                Placeholder="Gõ tìm khóa học..."
+                                                Style="width: 100%;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <FluentAutocomplete TOption="ChuongHocOption"
+                                                Label="Thuộc Chương học (Tùy chọn)"
+                                                OnOptionsSearch="OnSearchChuongHoc"
+                                                OptionText="@(item => item.Name)"
+                                                SelectedOptions="@_selectedChuongHocs"
+                                                SelectedOptionsChanged="OnChuongHocChanged"
+                                                MaximumSelectedOptions="1"
+                                                Disabled="@(!ModelForm.KhoaHocId.HasValue)"
+                                                Placeholder="@(ModelForm.KhoaHocId.HasValue ? "Gõ tìm chương học..." : "Vui lòng chọn Khóa học trước")"
+                                                Style="width: 100%;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <FluentAutocomplete TOption="BaiHocOption"
+                                                Label="Thuộc Bài học (Tùy chọn)"
+                                                OnOptionsSearch="OnSearchBaiHoc"
+                                                OptionText="@(item => item.Name)"
+                                                SelectedOptions="@_selectedBaiHocs"
+                                                SelectedOptionsChanged="OnBaiHocChanged"
+                                                MaximumSelectedOptions="1"
+                                                Disabled="@(!ModelForm.ChuongHocId.HasValue)"
+                                                Placeholder="@(ModelForm.ChuongHocId.HasValue ? "Gõ tìm bài học..." : "Vui lòng chọn Chương học trước")"
+                                                Style="width: 100%;" />
+                        </FluentGridItem>
+                    </FluentGrid>
+                </FluentCard>
+            </FluentGridItem>
+
+            @* CỘT PHẢI: QUẢN LÝ DANH SÁCH CÂU HỎI TRONG BỘ *@
+            <FluentGridItem md="7">
+                <FluentCard Style="height: 100%; padding: 20px; display: flex; flex-direction: column;">
+                    <h3 style="margin-top:0;">Danh sách Câu hỏi trong bộ</h3>
+
+                    @* Ô Tìm kiếm và thêm câu hỏi *@
+                    <div style="background: #f3f2f1; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <FluentLabel Weight="FontWeight.Bold">Thêm câu hỏi từ Ngân hàng</FluentLabel>
+                        <FluentAutocomplete TOption="CauHoiOption"
+                                            OnOptionsSearch="OnSearchCauHoi"
+                                            OptionText="@(item => item.NoiDungDisplay)"
+                                            SelectedOptions="@SelectedOptionsToAdd"
+                                            SelectedOptionsChanged="OnAddQuestionToSet"
+                                            MaximumSelectedOptions="1"
+                                            Placeholder="Gõ từ khóa nội dung câu hỏi để tìm và thêm..."
+                                            Style="width: 100%; margin-top: 8px;" />
+                    </div>
+
+                    @* Danh sách các câu hỏi đã chọn *@
+                    <div style="flex-grow: 1; overflow-y: auto; padding-right: 5px;">
+                        @if (SelectedQuestions.Count == 0)
+                        {
+                            <div style="text-align:center; color:gray; padding: 30px;">
+                                <FluentIcon Value="@(new Icons.Regular.Size48.MailInbox())" />
+                                <p>Bộ câu hỏi đang trống. Hãy tìm và thêm câu hỏi ở phía trên.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var q in SelectedQuestions.OrderBy(x => x.ThuTu).ToList())
+                            {
+                                <div style="border: 1px solid #e0e0e0; padding: 12px; margin-bottom: 10px; border-radius: 6px; display: flex; align-items: center; background: white;">
+                                    <div style="width: 30px; font-weight: bold; color: #0078d4;">#@q.ThuTu</div>
+                                    <div style="flex-grow: 1; margin: 0 10px; font-size: 0.95em;">
+                                        @((MarkupString)(string.IsNullOrEmpty(q.NoiDung) ? "<i>[Câu hỏi hình ảnh]</i>" : q.NoiDung))
+                                    </div>
+                                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                                        <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.ArrowUp())" OnClick="@(() => MoveUp(q))" Disabled="@(q.ThuTu == 1)" />
+                                        <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.ArrowDown())" OnClick="@(() => MoveDown(q))" Disabled="@(q.ThuTu == SelectedQuestions.Count)" />
+                                        <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" Style="color:red;" OnClick="@(() => RemoveQuestion(q))" />
+                                    </FluentStack>
+                                </div>
+                            }
+                        }
+                    </div>
+                </FluentCard>
+            </FluentGridItem>
+        </FluentGrid>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="margin-top: 20px;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="GoBack" Disabled="@IsSaving" Style="margin-right: 10px;">Hủy bỏ</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu Bộ câu hỏi</FluentButton>
+        </FluentStack>
+    </EditForm>
+}
+else
+{
+    <FluentProgressRing />
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+    [Inject] private NavigationManager NavManager { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private BoCauHoiOnTapForm ModelForm = new();
+
+    // Các class phụ trợ cho UI
+    public class SelectedQuestionUI { public Guid CauHoiId { get; set; } public string NoiDung { get; set; } = string.Empty; public int ThuTu { get; set; } }
+    public class CauHoiOption { public Guid Id { get; set; } public string NoiDungDisplay { get; set; } = string.Empty; public string RawHtml { get; set; } = string.Empty; }
+    public class KhoaHocOption { public Guid Id { get; set; } public string Name { get; set; } = string.Empty; }
+    public class ChuongHocOption { public Guid Id { get; set; } public string Name { get; set; } = string.Empty; }
+    public class BaiHocOption { public Guid Id { get; set; } public string Name { get; set; } = string.Empty; }
+    public class EnumOption { public EnumLoaiBoCauHoi Id { get; set; } public string Name { get; set; } = string.Empty; }
+
+    private List<SelectedQuestionUI> SelectedQuestions = new();
+    private IEnumerable<CauHoiOption> SelectedOptionsToAdd = new List<CauHoiOption>();
+    private IEnumerable<KhoaHocOption> _selectedKhoaHocs = Array.Empty<KhoaHocOption>();
+    private IEnumerable<ChuongHocOption> _selectedChuongHocs = Array.Empty<ChuongHocOption>();
+    private IEnumerable<BaiHocOption> _selectedBaiHocs = Array.Empty<BaiHocOption>();
+
+    private List<EnumOption> LoaiBoCauHoiOptions = Enum.GetValues(typeof(EnumLoaiBoCauHoi)).Cast<EnumLoaiBoCauHoi>()
+        .Select(e => new EnumOption { Id = e, Name = e.ToString() }).ToList();
+
+    private EnumOption SelectedLoaiBoCauHoi
+    {
+        get => LoaiBoCauHoiOptions.FirstOrDefault(x => x.Id == ModelForm.LoaiBoCauHoi) ?? LoaiBoCauHoiOptions.First();
+        set => ModelForm.LoaiBoCauHoi = value.Id;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue && Id.Value != Guid.Empty)
+        {
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/BoCauHoiOnTap/{Id.Value}", HasAuthorization = true };
+            var res = await CallService.Get<BoCauHoiOnTapDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                ModelForm = new BoCauHoiOnTapForm
+                {
+                    TenBo = res.Data.TenBo,
+                    MoTa = res.Data.MoTa,
+                    LoaiBoCauHoi = res.Data.LoaiBoCauHoi,
+                    ThoiLuongPhut = res.Data.ThoiLuongPhut, // ĐÃ BỔ SUNG GÁN THỜI LƯỢNG
+                    BaiHocId = res.Data.BaiHocId,
+                    ChuongHocId = res.Data.ChuongHocId,
+                    KhoaHocId = res.Data.KhoaHocId,
+                    GiangVienId = res.Data.GiangVienId
+                };
+
+                SelectedQuestions = res.Data.ChiTietBoCauHois.Select(c => new SelectedQuestionUI
+                {
+                    CauHoiId = c.CauHoiId,
+                    ThuTu = c.ThuTu,
+                    NoiDung = c.NoiDungCauHoi ?? "Chưa rõ nội dung"
+                }).ToList();
+
+                // Lấy tên Khóa Học để hiển thị
+                if (ModelForm.KhoaHocId.HasValue)
+                {
+                    var resKH = await CallService.Get<KhoaHocDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KhoaHoc/{ModelForm.KhoaHocId}" });
+                    if (resKH.Data != null) _selectedKhoaHocs = new List<KhoaHocOption> { new KhoaHocOption { Id = resKH.Data.Id, Name = resKH.Data.TenKhoaHoc } };
+                }
+
+                // Lấy tên Chương Học để hiển thị
+                if (ModelForm.ChuongHocId.HasValue)
+                {
+                    var resCH = await CallService.Get<ChuongHocDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/ChuongHoc/{ModelForm.ChuongHocId}" });
+                    if (resCH.Data != null) _selectedChuongHocs = new List<ChuongHocOption> { new ChuongHocOption { Id = resCH.Data.Id, Name = resCH.Data.TenChuong } };
+                }
+
+                // Lấy tên Bài Học để hiển thị
+                if (ModelForm.BaiHocId.HasValue)
+                {
+                    var resBH = await CallService.Get<BaiHocDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/BaiHoc/{ModelForm.BaiHocId}" });
+                    if (resBH.Data != null) _selectedBaiHocs = new List<BaiHocOption> { new BaiHocOption { Id = resBH.Data.Id, Name = resBH.Data.TieuDe } };
+                }
+            }
+        }
+
+        ModelForm.GiangVienId = new Guid("5694FEDB-75FC-40B0-018E-08DE94CBB2D5");
+        IsLoading = false;
+    }
+
+    // --- LOGIC AUTOCOMPLETE CASCADING ---
+    private async Task OnSearchKhoaHoc(OptionsSearchEventArgs<KhoaHocOption> e)
+    {
+        var query = new { Keyword = e.Text, gridRequest = new { page = 1, pageSize = 50 } };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/KhoaHoc/getpaged", HasAuthorization = true };
+        var res = await CallService.Post<DataTableJson<KhoaHocDto>>(req, query);
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+            e.Items = res.Data.Data.Select(x => new KhoaHocOption { Id = x.Id, Name = x.TenKhoaHoc }).ToList();
+    }
+
+    private void OnKhoaHocChanged(IEnumerable<KhoaHocOption> selected)
+    {
+        _selectedKhoaHocs = selected;
+        ModelForm.KhoaHocId = selected.FirstOrDefault()?.Id;
+
+        _selectedChuongHocs = Array.Empty<ChuongHocOption>();
+        ModelForm.ChuongHocId = null;
+
+        _selectedBaiHocs = Array.Empty<BaiHocOption>();
+        ModelForm.BaiHocId = null;
+    }
+
+    private async Task OnSearchChuongHoc(OptionsSearchEventArgs<ChuongHocOption> e)
+    {
+        if (!ModelForm.KhoaHocId.HasValue) return;
+        // Chú ý: Backend cần hứng được tham số KhoaHocId để lọc
+        var query = new { Keyword = e.Text, KhoaHocId = ModelForm.KhoaHocId, gridRequest = new { page = 1, pageSize = 50 } };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/ChuongHoc/getpaged", HasAuthorization = true };
+        var res = await CallService.Post<DataTableJson<ChuongHocDto>>(req, query);
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+            e.Items = res.Data.Data.Select(x => new ChuongHocOption { Id = x.Id, Name = x.TenChuong }).ToList();
+    }
+
+    private void OnChuongHocChanged(IEnumerable<ChuongHocOption> selected)
+    {
+        _selectedChuongHocs = selected;
+        ModelForm.ChuongHocId = selected.FirstOrDefault()?.Id;
+
+        _selectedBaiHocs = Array.Empty<BaiHocOption>();
+        ModelForm.BaiHocId = null;
+    }
+
+    private async Task OnSearchBaiHoc(OptionsSearchEventArgs<BaiHocOption> e)
+    {
+        if (!ModelForm.ChuongHocId.HasValue) return;
+        // Chú ý: Backend cần hứng được tham số ChuongHocId để lọc
+        var query = new { Keyword = e.Text, ChuongHocId = ModelForm.ChuongHocId, gridRequest = new { page = 1, pageSize = 50 } };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/BaiHoc/getpaged", HasAuthorization = true };
+        var res = await CallService.Post<DataTableJson<BaiHocDto>>(req, query);
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+            e.Items = res.Data.Data.Select(x => new BaiHocOption { Id = x.Id, Name = x.TieuDe }).ToList();
+    }
+
+    private void OnBaiHocChanged(IEnumerable<BaiHocOption> selected)
+    {
+        _selectedBaiHocs = selected;
+        ModelForm.BaiHocId = selected.FirstOrDefault()?.Id;
+    }
+
+    // --- LOGIC TÌM KIẾM VÀ QUẢN LÝ CÂU HỎI TRONG BỘ ---
+    private async Task OnSearchCauHoi(OptionsSearchEventArgs<CauHoiOption> e)
+    {
+        var baseQuery = new BaseQuery { draw = 1, SearchIn = new List<string> { "NoiDung" }, Keyword = e.Text, gridRequest = new GridRequest { page = 1, pageSize = 20 } };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/CauHoi/getpaged", HasAuthorization = true };
+        var res = await CallService.Post<DataTableJson<CauHoiDto>>(req, baseQuery);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new CauHoiOption
+            {
+                Id = x.Id,
+                RawHtml = x.NoiDung,
+                NoiDungDisplay = System.Text.RegularExpressions.Regex.Replace(x.NoiDung ?? "[Ảnh]", "<.*?>", string.Empty)
+            }).ToList();
+        }
+    }
+
+    private void OnAddQuestionToSet(IEnumerable<CauHoiOption> selected)
+    {
+        SelectedOptionsToAdd = selected;
+        if (selected != null && selected.Any())
+        {
+            var q = selected.First();
+            if (!SelectedQuestions.Any(x => x.CauHoiId == q.Id))
+            {
+                SelectedQuestions.Add(new SelectedQuestionUI { CauHoiId = q.Id, NoiDung = q.RawHtml, ThuTu = SelectedQuestions.Count + 1 });
+            }
+            else ToastService.ShowWarning("Câu hỏi này đã tồn tại trong bộ!");
+
+            SelectedOptionsToAdd = Array.Empty<CauHoiOption>();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveQuestion(SelectedQuestionUI q) { SelectedQuestions.Remove(q); Reorder(); }
+    private void MoveUp(SelectedQuestionUI q)
+    {
+        if (q.ThuTu <= 1) return;
+        var prev = SelectedQuestions.First(x => x.ThuTu == q.ThuTu - 1);
+        prev.ThuTu++; q.ThuTu--;
+    }
+    private void MoveDown(SelectedQuestionUI q)
+    {
+        if (q.ThuTu >= SelectedQuestions.Count) return;
+        var next = SelectedQuestions.First(x => x.ThuTu == q.ThuTu + 1);
+        next.ThuTu--; q.ThuTu++;
+    }
+    private void Reorder()
+    {
+        var sorted = SelectedQuestions.OrderBy(x => x.ThuTu).ToList();
+        for (int i = 0; i < sorted.Count; i++) sorted[i].ThuTu = i + 1;
+    }
+
+    private async Task Save()
+    {
+        if (SelectedQuestions.Count == 0)
+        {
+            ToastService.ShowWarning("Vui lòng thêm ít nhất 1 câu hỏi vào bộ!");
+            return;
+        }
+
+        ModelForm.ChiTietBoCauHois = SelectedQuestions.OrderBy(x => x.ThuTu).Select(x => new ChiTietBoCauHoiForm { CauHoiId = x.CauHoiId, ThuTu = x.ThuTu }).ToList();
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = Id.HasValue ? $"/BoCauHoiOnTap/{Id.Value}" : "/BoCauHoiOnTap", HasAuthorization = true };
+            bool isSuccess = Id.HasValue ? (await CallService.Put(req, ModelForm)).Status == StatusCode.OK : (await CallService.Post<Guid>(req, ModelForm)).Status == StatusCode.OK;
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu Bộ câu hỏi thành công!");
+                GoBack();
+            }
+            else ToastService.ShowError("Có lỗi xảy ra khi lưu.");
+        }
+        finally { IsSaving = false; }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/nghiep-vu/quan-ly-bo-cau-hoi");
+}

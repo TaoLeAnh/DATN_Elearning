@@ -1,0 +1,634 @@
+﻿@page
+@model StudyModel
+@{
+    ViewData["Title"] = Model.IsQuizMode ? (Model.ActiveQuiz?.TenBo ?? "Phòng thi") : (Model.ActiveLesson?.TieuDe ?? "Phòng học");
+}
+
+@Html.AntiForgeryToken()
+
+<div class="lms-wrapper container-fluid px-4 mt-3 mb-5">
+    <div class="row g-4">
+
+        <div class="col-lg-3">
+            <div class="lms-sidebar shadow-sm rounded bg-white">
+                <div class="lms-sidebar-header d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <span class="fw-bold">Nội dung khóa học</span>
+                    <i class="fa-solid fa-list"></i>
+                </div>
+
+                <div class="p-3 border-bottom bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold small text-muted">Tiến độ của bạn</span>
+                        <span class="text-success fw-bold small">@Model.ProgressPercentage%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: @Model.ProgressPercentage%;" aria-valuenow="@Model.ProgressPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="text-muted small mt-2 text-center">Đã hoàn thành @Model.CompletedItems / @Model.TotalItems bài</div>
+                </div>
+
+                <div class="lms-sidebar-body">
+                    <div class="accordion lms-accordion" id="syllabusAccordion">
+                        @if (Model.KhoaHocDetail?.ChuongHocs != null)
+                        {
+                            int chuongIndex = 0;
+                            foreach (var chuong in Model.KhoaHocDetail.ChuongHocs)
+                            {
+                                chuongIndex++;
+                                string targetId = $"chap_{chuong.Id}";
+                                bool isChapterActive = chuong.BaiHocs.Any(b => b.Id == Model.ActiveLesson?.Id) ||
+                                (Model.ActiveQuiz != null && Model.ActiveQuiz.ChuongHocId == chuong.Id);
+
+                                <div class="accordion-item border-0 border-bottom">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button fw-bold @(isChapterActive ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@targetId">
+                                            Chương @chuongIndex: @chuong.TenChuong
+                                        </button>
+                                    </h2>
+                                    <div id="@targetId" class="accordion-collapse collapse @(isChapterActive ? "show" : "")">
+                                        <div class="accordion-body p-0">
+                                            @foreach (var bai in chuong.BaiHocs)
+                                            {
+                                                bool isLessonActive = !Model.IsQuizMode && bai.Id == Model.ActiveLesson?.Id;
+
+                                                // KIỂM TRA BÀI NÀY ĐÃ HỌC CHƯA
+                                                bool isCompleted = Model.CompletedLessonIds.Contains(bai.Id);
+
+                                                <a href="/Study?courseId=@Model.KhoaHocDetail.Id&lessonId=@bai.Id"
+                                                   class="lms-lesson-item d-flex align-items-center p-3 border-bottom text-decoration-none @(isLessonActive ? "bg-primary text-white" : "text-dark hover-bg-light")">
+
+                                                    @if (isCompleted)
+                                                    {
+                                                        <i class="fa-solid fa-circle-check me-3 @(isLessonActive ? "text-white" : "text-success") fs-5"></i>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(bai.VideoUrl))
+                                                    {
+                                                        <i class="fa-solid fa-play-circle me-3 @(isLessonActive ? "text-white" : "text-secondary") fs-5"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fa-solid fa-file-alt me-3 @(isLessonActive ? "text-white" : "text-secondary") fs-5"></i>
+                                                    }
+
+                                                    <span class="@(isCompleted && !isLessonActive ? "text-muted" : "")">@bai.TieuDe</span>
+                                                </a>
+
+                                                @if (bai.DanhSachBoCauHoi != null && bai.DanhSachBoCauHoi.Any())
+                                                {
+                                                    foreach (var quiz in bai.DanhSachBoCauHoi)
+                                                    {
+                                                        bool isQuizActive = Model.IsQuizMode && quiz.Id == Model.ActiveQuiz?.Id;
+                                                        <a href="/Study?courseId=@Model.KhoaHocDetail.Id&quizId=@quiz.Id"
+                                                           id="sidebar_quiz_@quiz.Id"
+                                                           class="lms-lesson-item p-2 ps-5 d-block text-decoration-none @(isQuizActive ? "bg-warning text-dark fw-bold" : "bg-light text-muted")"
+                                                           style="border-left: 3px solid #ff9800; font-size: 0.9em;">
+                                                            <i class="fa-solid fa-clipboard-question text-warning me-2"></i> Bài tập: @quiz.TenBo
+                                                        </a>
+                                                    }
+                                                }
+                                            }
+                             
+                                            @if (chuong.DanhSachBoCauHoi != null && chuong.DanhSachBoCauHoi.Any())
+                                            {
+                                                <div class="p-2 border-top">
+                                                    @foreach (var quiz in chuong.DanhSachBoCauHoi)
+                                                    {
+                                                        bool isQuizActive = Model.IsQuizMode && quiz.Id == Model.ActiveQuiz?.Id;
+                                                        <a href="/Study?courseId=@Model.KhoaHocDetail.Id&quizId=@quiz.Id"
+                                                           id="sidebar_quiz_@quiz.Id"
+                                                           class="lms-lesson-item rounded text-decoration-none d-block p-2 @(isQuizActive ? "active bg-danger text-white shadow-sm" : "")"
+                                                           style="@(!isQuizActive ? "background-color: #fff3cd; border: 1px dashed #ffe69c;" : "")">
+                                                            <i class="fa-solid fa-list-check @(isQuizActive ? "text-white" : "text-danger") me-2"></i>
+                                                            <span class="fw-bold @(!isQuizActive ? "text-danger" : "")">@quiz.TenBo</span>
+                                                        </a>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!Model.IsQuizMode)
+        {
+            <div class="col-lg-9">
+                <div>
+                    @if (!string.IsNullOrEmpty(Model.EmbedYoutubeUrl))
+                    {
+                        <div class="lms-video-container mb-3 shadow-sm" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; background-color: #000;">
+                            <iframe src="@Model.EmbedYoutubeUrl" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                    }
+                    <div class="card border-0 shadow-sm p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h3 class="fw-bold m-0">@Model.ActiveLesson.TieuDe</h3>
+
+                            @if (Model.CompletedLessonIds.Contains(Model.ActiveLesson.Id))
+                            {
+                                <button class="btn btn-success rounded-pill" disabled>
+                                    <i class="fa-solid fa-check me-2"></i> Đã học xong
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-success rounded-pill fw-bold" id="btnMarkComplete" onclick="markLessonComplete('@Model.ActiveLesson.Id')">
+                                    <i class="fa-solid fa-check me-2"></i> Đánh dấu hoàn thành
+                                </button>
+                            }
+                        </div>
+
+                        <p class="text-muted"><i class="fa-solid fa-clock me-2"></i> @Model.ActiveLesson.ThoiLuong phút</p>
+                        <hr>
+                        <p style="white-space: pre-line; line-height: 1.8;">@(string.IsNullOrEmpty(Model.ActiveLesson.NoiDung) ? "Chưa có mô tả cho bài học này." : Model.ActiveLesson.NoiDung)</p>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.ActiveQuiz != null)
+        {
+            <div class="col-lg-9" id="main-quiz-column">
+
+                <div id="quiz-intro-screen" class="text-center p-5 bg-white shadow-sm rounded border-top border-4 border-warning mt-2">
+                    <h2 class="fw-bold text-danger mb-3">@Model.ActiveQuiz.TenBo</h2>
+                    <p class="text-muted mb-4">@(string.IsNullOrEmpty(Model.ActiveQuiz.MoTa) ? "Bộ câu hỏi ôn tập kiến thức." : Model.ActiveQuiz.MoTa)</p>
+
+                    <div class="d-flex justify-content-center gap-4 mb-5">
+                        <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
+                            <i class="fa-solid fa-list-ol fa-2x text-primary mb-2"></i>
+                            <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)</h4>
+                            <small class="text-muted">Câu hỏi</small>
+                        </div>
+                        <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
+                            <i class="fa-regular fa-clock fa-2x text-warning mb-2"></i>
+                            <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ThoiLuongPhut)</h4>
+                            <small class="text-muted">Phút</small>
+                        </div>
+                    </div>
+
+                    @if (Model.ActiveQuiz.ChiTietBoCauHois != null && Model.ActiveQuiz.ChiTietBoCauHois.Any())
+                    {
+                        @if (Model.QuizHistory.Any())
+                        {
+                            <button id="btnBatDau" class="btn btn-outline-warning btn-lg fw-bold rounded-pill px-5 py-3 shadow-sm" style="color: #d35400; border-color: #d35400;">
+                                <i class="fa-solid fa-rotate-right me-2"></i> LÀM LẠI BÀI TẬP
+                            </button>
+                        }
+                        else
+                        {
+                            <button id="btnBatDau" class="btn btn-warning btn-lg text-white fw-bold rounded-pill px-5 py-3 shadow">
+                                <i class="fa-solid fa-play me-2"></i> BẮT ĐẦU LÀM BÀI
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">Bộ câu hỏi này hiện đang trống!</div>
+                    }
+
+                    @if (Model.QuizHistory.Any())
+                    {
+                        <div class="mt-5 text-start">
+                            <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử làm bài của bạn</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered bg-white shadow-sm text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Lần thi</th>
+                                            <th>Ngày nộp</th>
+                                            <th>Thời gian làm</th>
+                                            <th>Số câu đúng</th>
+                                            <th>Điểm số</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            int attempt = Model.QuizHistory.Count;
+                                        }
+                                        @foreach (var hist in Model.QuizHistory)
+                                        {
+                                            <tr>
+                                                <td class="fw-bold">Lần @attempt</td>
+                                                <td>@(hist.ThoiDiemNop?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp")</td>
+                                                <td>
+                                                    @if (hist.ThoiDiemNop.HasValue)
+                                                    {
+                                                        var time = hist.ThoiDiemNop.Value - hist.ThoiDiemBatDau;
+                                                        <span class="badge bg-secondary">@time.Minutes p @time.Seconds s</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>-</span>
+                                                    }
+                                                </td>
+                                                <td>@hist.SoCauDung / @(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)</td>
+                                                <td class="fw-bold text-danger fs-5">@hist.Diem</td>
+                                            </tr>
+                                            attempt--;
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div id="quiz-questions-container" style="display: none;">
+                    <h4 class="fw-bold text-center text-danger mb-2">@Model.ActiveQuiz.TenBo</h4>
+                    <p class="text-center text-muted mb-4">@Model.ActiveQuiz.MoTa</p>
+
+                    @foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                    {
+                        <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-primary" id="question_@question.ThuTu" data-cauhoi-id="@question.CauHoiId">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold m-0 text-primary">Câu @question.ThuTu</h5>
+                            </div>
+
+                            <div class="mb-4" style="font-size: 1.05rem;">
+                                @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                                {
+                                    <div>@Html.Raw(question.NoiDungCauHoi)</div>
+                                }
+                                @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
+                                {
+                                    <div class="mt-3">
+                                        <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                    </div>
+                                }
+                            </div>
+
+                            @if (question.DapAns != null && question.DapAns.Any())
+                            {
+                                <div class="d-flex flex-column gap-2 mt-3">
+                                    @{
+                                        char prefix = 'A';
+                                    }
+                                    @foreach (var dapAn in question.DapAns.OrderBy(d => d.ThuTu))
+                                    {
+                                        <label class="quiz-option p-3 border rounded cursor-pointer hover-bg-light d-flex align-items-start">
+                                            <input type="radio" name="q_@question.CauHoiId" value="@dapAn.Id" class="me-3 mt-1" style="transform: scale(1.3);">
+                                            <span class="fw-bold me-2">@prefix.</span>
+                                            <div class="d-flex flex-column">
+                                                @if (!string.IsNullOrEmpty(dapAn.NoiDung))
+                                                {
+                                                    <div>@Html.Raw(dapAn.NoiDung)</div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(dapAn.HinhAnhUrl))
+                                                {
+                                                    <div class="mt-2"><img src="@dapAn.HinhAnhUrl" class="img-fluid rounded border" style="max-height: 150px;" /></div>
+                                                }
+                                            </div>
+                                        </label>
+                                        prefix++;
+                                    }
+                                </div>
+                            }
+                            else if (question.MenhDeDungSais != null && question.MenhDeDungSais.Any())
+                            {
+                                <div class="alert alert-info py-2 mb-3">Chọn <strong>Đúng</strong> hoặc <strong>Sai</strong> cho từng ý:</div>
+                                <div class="d-flex flex-column gap-3 mt-2">
+                                    @{
+                                        char mdPrefix = 'a';
+                                    }
+                                    @foreach (var md in question.MenhDeDungSais.OrderBy(m => m.ThuTu))
+                                    {
+                                        <div class="p-3 border rounded bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                            <div class="d-flex">
+                                                <span class="fw-bold me-2">@mdPrefix)</span>
+                                                <span>@Html.Raw(md.NoiDung)</span>
+                                            </div>
+                                            <div class="d-flex gap-3 bg-white p-2 rounded shadow-sm border" style="min-width: 150px; justify-content: center;">
+                                                <label class="cursor-pointer text-success fw-bold"><input type="radio" name="md_@md.Id" value="true" class="me-2"> Đúng</label>
+                                                <div style="width: 1px; background: #ddd;"></div>
+                                                <label class="cursor-pointer text-danger fw-bold"><input type="radio" name="md_@md.Id" value="false" class="me-2"> Sai</label>
+                                            </div>
+                                        </div>
+                                        mdPrefix++;
+                                    }
+                                </div>
+                            }
+                            else if (question.DapAnDienKetQuas != null && question.DapAnDienKetQuas.Any())
+                            {
+                                <div class="mt-4 p-4 border border-2 border-primary rounded" style="background-color: #f8faff;">
+                                    <label class="fw-bold text-primary mb-2">Nhập kết quả của bạn:</label>
+                                    <input type="text" class="form-control form-control-lg border-primary shadow-sm" name="dkq_@question.CauHoiId">
+                                </div>
+                            }
+
+                            <div class="text-end mt-3">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="review_@question.Id">
+                                    <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div id="quiz-result-screen" class="text-center p-5 py-5 bg-white shadow-sm rounded border-top border-4 border-success mt-2" style="display: none; min-height: 400px;">
+                    <i class="fa-solid fa-circle-check text-success mb-4" style="font-size: 5rem;"></i>
+                    <h2 class="fw-bold text-success mb-3">NỘP BÀI THÀNH CÔNG!</h2>
+                    <p class="text-muted fs-5 mb-4">Bạn đã hoàn thành bài ôn tập. Dưới đây là kết quả của bạn:</p>
+
+                    <div class="p-4 bg-light rounded mb-5 d-inline-block border border-success shadow-sm" style="min-width: 280px;">
+                        <div class="text-muted mb-2 fs-5">Điểm số</div>
+                        <div class="fw-bold text-danger" style="font-size: 4rem; line-height: 1;"><span id="final-score">0</span><span class="fs-3 text-dark">/10</span></div>
+                    </div>
+                    <br />
+                    <button class="btn btn-outline-primary btn-lg rounded-pill px-5 py-3 fw-bold" onclick="window.location.reload()">
+                        <i class="fa-solid fa-rotate-right me-2"></i> LÀM LẠI BÀI THI
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="col-lg-3" id="quiz-tracker-column" style="display: none;">
+                <div id="quiz-tracker-container" class="quiz-tracker-box bg-white p-4 rounded shadow-sm position-sticky" style="top: 20px;">
+                    <div class="tracker-stats d-flex justify-content-between text-center mb-4 pb-3 border-bottom">
+                        <div class="flex-fill">
+                            <div class="stat-label text-muted small mb-1">Tiến độ</div>
+                            <div class="stat-value fw-bold fs-4">
+                                <span id="answered-count" class="text-success">0</span> / @(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)
+                            </div>
+                        </div>
+                        <div style="width: 1px; background: #eee;"></div>
+                        <div class="flex-fill">
+                            <div class="stat-label text-muted small mb-1">Thời gian</div>
+                            <div id="quiz-timer" class="stat-value tracker-timer fw-bold fs-4 text-danger">@(Model.ActiveQuiz.ThoiLuongPhut):00</div>
+                        </div>
+                    </div>
+
+                    <div class="question-palette custom-scrollbar d-flex flex-wrap gap-2 justify-content-center mb-4">
+                        @if (Model.ActiveQuiz.ChiTietBoCauHois != null)
+                        {
+                            foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                            {
+                                <a href="#question_@question.ThuTu" id="tracker_@question.ThuTu" class="tracker-btn btn btn-outline-secondary rounded-circle d-flex justify-content-center align-items-center text-decoration-none" style="width: 40px; height: 40px; padding: 0; transition: 0.3s;">
+                                    @question.ThuTu
+                                </a>
+                            }
+                        }
+                    </div>
+
+                    <div class="d-grid mb-4">
+                        <button id="btnNopBai" class="btn btn-warning text-white fw-bold rounded-pill py-3 fs-5" style="background: #f39c12;">NỘP BÀI</button>
+                    </div>
+
+                    <div class="tracker-legend small text-muted">
+                        <div class="d-flex align-items-center mb-2"><div class="rounded-circle bg-success me-2" style="width: 15px; height: 15px;"></div> Câu đã làm</div>
+                        <div class="d-flex align-items-center mb-2"><div class="rounded-circle border border-secondary me-2" style="width: 15px; height: 15px;"></div> Câu chưa làm</div>
+                        <div class="d-flex align-items-center"><div class="rounded-circle me-2" style="width: 15px; height: 15px; background-color: #a569bd;"></div> Cần kiểm tra lại</div>
+                    </div>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function markLessonComplete(baiHocId) {
+            const btn = document.getElementById('btnMarkComplete');
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang lưu...';
+
+            fetch('?handler=MarkComplete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ BaiHocId: baiHocId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                    btn.innerHTML = '<i class="fa-solid fa-check me-2"></i> Đã học xong';
+
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    alert(data.message || "Lỗi lưu tiến độ. Vui lòng thử lại.");
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check me-2"></i> Đánh dấu hoàn thành';
+                }
+            })
+            .catch(err => {
+                alert("Lỗi mạng!");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check me-2"></i> Đánh dấu hoàn thành';
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const introScreen = document.getElementById('quiz-intro-screen');
+            const questionsContainer = document.getElementById('quiz-questions-container');
+            const trackerColumn = document.getElementById('quiz-tracker-column');
+            const resultScreen = document.getElementById('quiz-result-screen');
+            const mainQuizColumn = document.getElementById('main-quiz-column');
+            const btnBatDau = document.getElementById('btnBatDau');
+            const btnNopBai = document.getElementById('btnNopBai');
+            const timerDisplay = document.getElementById('quiz-timer');
+            const answeredCountDisplay = document.getElementById('answered-count');
+
+            let countdownInterval;
+            let timeInSeconds = @(Model.ActiveQuiz?.ThoiLuongPhut ?? 45) * 60;
+
+            if (btnBatDau) {
+                btnBatDau.addEventListener('click', function() {
+                    introScreen.style.display = 'none';
+                    questionsContainer.style.display = 'block';
+
+                    if (mainQuizColumn) {
+                        mainQuizColumn.classList.remove('col-lg-9');
+                        mainQuizColumn.classList.add('col-lg-6');
+                    }
+                    if (trackerColumn) {
+                        trackerColumn.style.display = 'block';
+                    }
+                    startTimer();
+                });
+            }
+
+            function startTimer() {
+                updateTimerUI();
+                countdownInterval = setInterval(function () {
+                    timeInSeconds--;
+                    updateTimerUI();
+
+                    if (timeInSeconds <= 0) {
+                        clearInterval(countdownInterval);
+                        alert("Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài.");
+                        submitQuizData();
+                    }
+                }, 1000);
+            }
+
+            function updateTimerUI() {
+                let m = Math.floor(timeInSeconds / 60);
+                let s = timeInSeconds % 60;
+                m = m < 10 ? "0" + m : m;
+                s = s < 10 ? "0" + s : s;
+                if(timerDisplay) timerDisplay.innerText = `${m}:${s}`;
+            }
+
+            const questionCards = document.querySelectorAll('.quiz-question-card');
+
+            const updateOverallProgress = () => {
+                let totalAnswered = 0;
+                questionCards.forEach(card => {
+                    let isCardAnswered = false;
+                    card.querySelectorAll('input[type="radio"], input[type="text"]').forEach(input => {
+                        if (input.type === 'radio' && input.checked && !input.id.startsWith('review_')) isCardAnswered = true;
+                        if (input.type === 'text' && input.value.trim() !== '') isCardAnswered = true;
+                    });
+                    if (isCardAnswered) totalAnswered++;
+                });
+                if (answeredCountDisplay) answeredCountDisplay.innerText = totalAnswered;
+            };
+
+            questionCards.forEach(card => {
+                const qNumber = card.id.split('_')[1];
+                const trackerBtn = document.getElementById('tracker_' + qNumber);
+                if (!trackerBtn) return;
+
+                const answerInputs = card.querySelectorAll('input[type="radio"], input[type="text"]');
+                const reviewSwitch = card.querySelector('input[type="checkbox"][id^="review_"]');
+
+                const updateTrackerColor = () => {
+                    let isAnswered = false;
+                    answerInputs.forEach(input => {
+                        if (input.type === 'radio' && input.checked) isAnswered = true;
+                        if (input.type === 'text' && input.value.trim() !== '') isAnswered = true;
+                    });
+                    let isReview = reviewSwitch && reviewSwitch.checked;
+
+                    trackerBtn.classList.remove('btn-outline-secondary', 'btn-success', 'text-white');
+                    trackerBtn.style.backgroundColor = '';
+                    trackerBtn.style.borderColor = '';
+
+                    if (isReview) {
+                        trackerBtn.classList.add('text-white');
+                        trackerBtn.style.backgroundColor = '#a569bd';
+                        trackerBtn.style.borderColor = '#a569bd';
+                    } else if (isAnswered) {
+                        trackerBtn.classList.add('btn-success', 'text-white');
+                    } else {
+                        trackerBtn.classList.add('btn-outline-secondary');
+                    }
+
+                    updateOverallProgress();
+                };
+
+                answerInputs.forEach(input => {
+                    input.addEventListener('change', updateTrackerColor);
+                    if (input.type === 'text') input.addEventListener('keyup', updateTrackerColor);
+                });
+                if (reviewSwitch) reviewSwitch.addEventListener('change', updateTrackerColor);
+            });
+
+            updateOverallProgress();
+
+            if (btnNopBai) {
+                btnNopBai.addEventListener('click', function () {
+                    if (confirm("Bạn đã kiểm tra kỹ chưa? Xác nhận nộp bài?")) {
+                        submitQuizData();
+                    }
+                });
+            }
+
+            function submitQuizData() {
+                clearInterval(countdownInterval);
+
+                if(btnNopBai) {
+                    btnNopBai.disabled = true;
+                    btnNopBai.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang nộp...';
+                }
+
+                let totalTimeInSeconds = @(Model.ActiveQuiz?.ThoiLuongPhut ?? 45) * 60;
+                let thoiGianDaLam = totalTimeInSeconds - timeInSeconds;
+                if (thoiGianDaLam < 0) thoiGianDaLam = 0;
+
+                let payload = {
+                    boCauHoiId: "@(Model.ActiveQuiz?.Id)",
+                    thoiGianLamBaiGiay: thoiGianDaLam,
+                    danhSachTraLoi: []
+                };
+
+                document.querySelectorAll('.quiz-question-card').forEach(card => {
+                    let cauHoiId = card.getAttribute('data-cauhoi-id');
+                    let traLoi = { cauHoiId: cauHoiId, dapAnId: null, giaTriNhap: null, menhDes: [] };
+                    let hasAnswer = false;
+
+                    const radioCheck = card.querySelector('input[type="radio"][name^="q_"]:checked');
+                    if (radioCheck) { traLoi.dapAnId = radioCheck.value; hasAnswer = true; }
+
+                    const textInput = card.querySelector('input[type="text"][name^="dkq_"]');
+                    if (textInput && textInput.value.trim() !== '') {
+                        traLoi.giaTriNhap = parseFloat(textInput.value.trim().replace(',', '.'));
+                        hasAnswer = true;
+                    }
+
+                    const mdInputs = card.querySelectorAll('input[type="radio"][name^="md_"]:checked');
+                    if (mdInputs.length > 0) {
+                        mdInputs.forEach(md => {
+                            traLoi.menhDes.push({ menhDeId: md.name.replace('md_', ''), luaChonCuaHocVien: md.value === 'true' });
+                        });
+                        hasAnswer = true;
+                    }
+
+                    if (hasAnswer) payload.danhSachTraLoi.push(traLoi);
+                });
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                fetch('?handler=SubmitQuiz', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.success) {
+                        questionsContainer.style.display = 'none';
+                        if (trackerColumn) trackerColumn.style.display = 'none';
+
+                        if (mainQuizColumn) {
+                            mainQuizColumn.classList.remove('col-lg-6');
+                            mainQuizColumn.classList.add('col-lg-9');
+                        }
+
+                        resultScreen.style.display = 'block';
+                        document.getElementById('final-score').innerText = res.diem;
+                        window.scrollTo(0, 0);
+                    } else {
+                        alert(res.message || "Có lỗi xảy ra, vui lòng thử lại!");
+                        if(btnNopBai) {
+                            btnNopBai.disabled = false;
+                            btnNopBai.innerText = 'NỘP BÀI';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert("Lỗi mạng! Không thể nộp bài.");
+                    if(btnNopBai) {
+                        btnNopBai.disabled = false;
+                        btnNopBai.innerText = 'NỘP BÀI';
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,70 @@
+﻿@page "/nghiep-vu/quan-ly-ma-tran"
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Danh sách Ma trận Đề thi</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" OnClick="OpenAddModal" Loading="@IsLoadingSync">Thêm mới</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Nhập tên ma trận..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="MaTranDeThiMacDinhDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 30% 15% 15% 15% 20%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+
+        <TemplateColumn Title="Tên ma trận" Sortable="true" SortBy="@_roleTieuDeSort">
+            <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                @context.TenMaTran
+            </span>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Môn học" Sortable="true">
+            <FluentBadge Appearance="Appearance.Lightweight">
+                @context.MonHoc.GetDescription()
+            </FluentBadge>
+        </TemplateColumn>
+
+        <PropertyColumn Title="Tổng số câu" Property="@(c => c.TongSoCau + " câu")" Sortable="false" />
+
+        <TemplateColumn Title="Trạng thái" Sortable="true">
+            @if (context.IsActive)
+            {
+                <FluentBadge Appearance="Appearance.Accent" Fill="success" BackgroundColor="#16a34a" Color="#fff">Đang kích hoạt</FluentBadge>
+            }
+            else
+            {
+                <FluentBadge Appearance="Appearance.Neutral">Ngừng kích hoạt</FluentBadge>
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thao tác" Align="Align.End">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Outline" Title="Bật/Tắt Kích hoạt" OnClick="() => ToggleActiveAsync(context.Id)">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Power())" Color="@(context.IsActive? Color.Success: Color.Neutral)" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="@(() => EditAction(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Edit())" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="() => OpenModalDelete(context.Id)">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Delete())" Color="Color.Error" />
+                </FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

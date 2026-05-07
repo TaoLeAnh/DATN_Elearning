@@ -1,0 +1,95 @@
+﻿@page "/nghiep-vu/quan-ly-cau-hoi"
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+@using System.Text.RegularExpressions
+@using System.Net
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Ngân hàng Câu hỏi</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" OnClick="GoToAddPage">Thêm mới</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Tìm theo chủ đề hoặc nội dung..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="CauHoiDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 35% 15% 15% 20% 10%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+
+        <TemplateColumn Title="Nội dung" Sortable="false">
+            <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                @(string.IsNullOrEmpty(context.NoiDung) ? "[Câu hỏi bằng hình ảnh]" : GetPlainText(context.NoiDung, 80))
+            </span>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Loại câu hỏi" Sortable="true">
+            <FluentBadge Appearance="Appearance.Neutral">
+                @* Ép kiểu về Enum, nếu Enum không hợp lệ thì hiển thị fallback an toàn *@
+                @(((EnumLoaiCauHoi)context.LoaiCauHoi).GetDescription() ?? "Chưa xác định")
+            </FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Mức độ" Sortable="true">
+            <FluentBadge Appearance="Appearance.Accent">
+                @(((EnumMucDo)context.MucDo).GetDescription() ?? "Chưa xác định")
+            </FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Chủ đề / Phân loại" Sortable="false">
+            <div style="display:flex; flex-direction:column;">
+                <span style="font-weight: 500; margin-bottom: 4px;">@context.ChuDe</span>
+                @if (context.MonHoc.HasValue)
+                {
+                    <span style="font-size: 11px; color: #16a34a; font-weight: bold;">
+                        <FluentIcon Value="@(new Icons.Regular.Size12.Globe())" Color="Color.Success" /> Môn: @(((MonHocEnum)context.MonHoc.Value).GetDescription())
+                    </span>
+                }
+                else if (context.KhoaHocId.HasValue && context.KhoaHocId != Guid.Empty)
+                {
+                    <span style="font-size: 11px; color: #d97706; font-weight: bold;">
+                        <FluentIcon Value="@(new Icons.Regular.Size12.LockClosed())" Color="Color.Warning" /> Đề Nội bộ
+                    </span>
+                }
+            </div>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thao tác" Align="Align.End">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Outline" OnClick="@(() => GoToEditPage(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="() => OpenModalDelete(context.Id)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" />
+                </FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>
+
+@code {
+    // Hàm loại bỏ thẻ HTML để hiển thị dạng text ngắn gọn, an toàn trên Grid
+    private string GetPlainText(string html, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+        var plainText = Regex.Replace(html, "<.*?>", string.Empty); // Xóa toàn bộ thẻ HTML
+        plainText = WebUtility.HtmlDecode(plainText); // Giải mã các ký tự như &nbsp;, &amp;
+        if (plainText.Length <= maxLength) return plainText;
+        return plainText.Substring(0, maxLength) + "...";
+    }
+
+    // (Giữ nguyên các hàm LoadDatas, GoToAddPage, v.v. của bạn ở đây...)
+}

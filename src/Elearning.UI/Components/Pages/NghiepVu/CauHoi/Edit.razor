@@ -1,0 +1,335 @@
+﻿@page "/nghiep-vu/quan-ly-cau-hoi/edit"
+@page "/nghiep-vu/quan-ly-cau-hoi/edit/{Id:guid}"
+
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.Shared.Commons.Extensions
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Stealth" IconStart="@(new Icons.Regular.Size24.ArrowLeft())" OnClick="GoBack">Quay lại</FluentButton>
+    <h2>@(Id == null ? "Thêm mới Câu hỏi" : "Chỉnh sửa Câu hỏi")</h2>
+</FluentStack>
+
+@if (!IsLoading)
+{
+    <EditForm Model="@ModelForm" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+
+        <FluentGrid Spacing="3">
+            @* CỘT TRÁI: THÔNG TIN CÂU HỎI *@
+            <FluentGridItem md="6">
+                <FluentCard Style="height: 100%; padding: 20px;">
+                    <h3>Thông tin chung</h3>
+                    <FluentGrid Spacing="2">
+                        <FluentGridItem md="6">
+                            <FluentSelect Label="Loại câu hỏi" TOption="string" Value="@ModelForm.LoaiCauHoi.ToString()" ValueChanged="@(v => ModelForm.LoaiCauHoi = Enum.Parse<EnumLoaiCauHoi>(v))" Style="width: 100%;">
+                                @foreach (EnumLoaiCauHoi item in Enum.GetValues(typeof(EnumLoaiCauHoi)))
+                                {
+                                    <FluentOption Value="@item.ToString()">@item.GetDescription()</FluentOption>
+                                }
+                            </FluentSelect>
+                        </FluentGridItem>
+
+                        <FluentGridItem md="6">
+                            <FluentSelect Label="Mức độ khó" TOption="string" Value="@ModelForm.MucDo.ToString()" ValueChanged="@(v => ModelForm.MucDo = Enum.Parse<EnumMucDo>(v))" Style="width: 100%;">
+                                @foreach (EnumMucDo item in Enum.GetValues(typeof(EnumMucDo)))
+                                {
+                                    <FluentOption Value="@item.ToString()">@item.GetDescription()</FluentOption>
+                                }
+                            </FluentSelect>
+                        </FluentGridItem>
+
+                        <FluentGridItem md="6">
+                            <FluentSelect Label="Môn học (Đề Public)"
+                                          TOption="string"
+                                          Value="@(ModelForm.MonHoc?.ToString())"
+                                          ValueChanged="@(v => ModelForm.MonHoc = string.IsNullOrEmpty(v) ? null : Enum.Parse<MonHocEnum>(v))"
+                                          Style="width: 100%;">
+                                <FluentOption Value="">-- Bỏ qua --</FluentOption>
+                                @foreach (MonHocEnum item in Enum.GetValues(typeof(MonHocEnum)))
+                                {
+                                    <FluentOption Value="@item.ToString()">@item.GetDescription()</FluentOption>
+                                }
+                            </FluentSelect>
+                        </FluentGridItem>
+
+                        <FluentGridItem md="6">
+                            <FluentSelect Label="Khóa học (Đề Nội bộ)"
+                                          TOption="string"
+                                          Value="@ModelForm.KhoaHocId.ToString()"
+                                          ValueChanged="@(v => ModelForm.KhoaHocId = string.IsNullOrEmpty(v) ? Guid.Empty : Guid.Parse(v))"
+                                          Style="width: 100%;">
+                                <FluentOption Value="">-- Bỏ qua --</FluentOption>
+                                @foreach (var kh in DanhSachKhoaHoc)
+                                {
+                                    <FluentOption Value="@kh.Id.ToString()">@kh.TenKhoaHoc</FluentOption>
+                                }
+                            </FluentSelect>
+                            <ValidationMessage For="@(() => ModelForm.KhoaHocId)" Style="color:red;" />
+                        </FluentGridItem>
+                        <FluentGridItem md="12">
+                            <FluentTextField @bind-Value="ModelForm.ChuDe" Label="Chủ đề (*)" Style="width: 100%;" />
+                            <ValidationMessage For="@(() => ModelForm.ChuDe)" Style="color:red;" />
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <FluentSelect @bind-Value="QuestionInputType" Label="Định dạng câu hỏi" TOption="string" Style="width: 100%;">
+                                <FluentOption Value="Text">Dùng Văn bản (RichText)</FluentOption>
+                                <FluentOption Value="Image">Dùng Ảnh (Tải lên)</FluentOption>
+                            </FluentSelect>
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            @if (QuestionInputType == "Text")
+                            {
+                                <SITextEditor Label="Nội dung câu hỏi"
+                                              Input="@ModelForm.NoiDung"
+                                              OnChange="@((string val) => ModelForm.NoiDung = val)" />
+                            }
+                            else
+                            {
+                                <div style="margin-top: 10px;">
+                                    <label style="font-weight: 500; margin-bottom: 8px; display: block; font-size: 14px;">Hình ảnh câu hỏi</label>
+                                    <ImagePicker ImageUrl="@ModelForm.HinhAnhUrl"
+                                                 Multiple="false"
+                                                 OnChange="@((string url) => ModelForm.HinhAnhUrl = url)"
+                                                 OnClear="@(() => ModelForm.HinhAnhUrl = string.Empty)" />
+                                </div>
+                            }
+                        </FluentGridItem>
+
+                        <FluentGridItem md="12">
+                            <SITextEditor Label="Giải thích đáp án (Hiện sau khi nộp bài)"
+                                          Input="@ModelForm.GiaiThich"
+                                          OnChange="@((string val) => ModelForm.GiaiThich = val)" />
+                        </FluentGridItem>
+                    </FluentGrid>
+                </FluentCard>
+            </FluentGridItem>
+
+            @* CỘT PHẢI: QUẢN LÝ ĐÁP ÁN *@
+            <FluentGridItem md="6">
+                <FluentCard Style="height: 100%; padding: 20px;">
+                    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+                        <h3>Danh sách Đáp án</h3>
+                        <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddDapAn">Thêm đáp án</FluentButton>
+                    </FluentStack>
+
+                    @for (int i = 0; i < ModelForm.DapAns.Count; i++)
+                    {
+                        var index = i;
+                        var dapAn = ModelForm.DapAns[index];
+
+                        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative;">
+                            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Top">
+                                <div style="font-weight: bold; width: 30px; margin-top: 10px;">@( (char)('A' + index) ).</div>
+
+                                <FluentSelect @bind-Value="DapAnInputTypes[index]" TOption="string" Style="width: 120px; margin-top: 10px;">
+                                    <FluentOption Value="Text">Văn bản</FluentOption>
+                                    <FluentOption Value="Image">Hình ảnh</FluentOption>
+                                </FluentSelect>
+
+                                <div style="flex-grow: 1;">
+                                    @if (DapAnInputTypes[index] == "Text")
+                                    {
+                                        <SITextEditor Input="@dapAn.NoiDung"
+                                                      OnChange="@((string val) => dapAn.NoiDung = val)" />
+                                    }
+                                    else
+                                    {
+                                        <div style="margin-top: 10px;">
+                                            <ImagePicker ImageUrl="@dapAn.HinhAnhUrl"
+                                                         Multiple="false"
+                                                         OnChange="@((string url) => dapAn.HinhAnhUrl = url)"
+                                                         OnClear="@(() => dapAn.HinhAnhUrl = string.Empty)" />
+                                        </div>
+                                    }
+                                </div>
+                            </FluentStack>
+
+                            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px;">
+                                <FluentCheckbox @bind-Value="dapAn.LaDapAnDung" Label="Là đáp án đúng" Style="margin-right: 15px; color: green;" />
+                                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => RemoveDapAn(dapAn))" Style="color:red;" />
+                            </div>
+                        </div>
+                    }
+                </FluentCard>
+            </FluentGridItem>
+        </FluentGrid>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="margin-top: 20px;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="GoBack" Disabled="@IsSaving" Style="margin-right: 10px;">Hủy bỏ</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu thông tin</FluentButton>
+        </FluentStack>
+    </EditForm>
+}
+else
+{
+    <FluentProgressRing />
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+    [Inject] private NavigationManager NavManager { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private CauHoiForm ModelForm = new();
+    private List<KhoaHocDto> DanhSachKhoaHoc = new();
+
+    // Quản lý trạng thái UI
+    private string QuestionInputType { get; set; } = "Text";
+    private List<string> DapAnInputTypes { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var reqKH = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/KhoaHoc/get-all", HasAuthorization = true };
+        var resKH = await CallService.Get<List<KhoaHocDto>>(reqKH);
+        if (resKH.Status == StatusCode.OK && resKH.Data != null)
+        {
+            DanhSachKhoaHoc = resKH.Data;
+        }
+        if (Id.HasValue && Id.Value != Guid.Empty)
+        {
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/CauHoi/{Id.Value}", HasAuthorization = true };
+            var res = await CallService.Get<CauHoiDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                ModelForm = new CauHoiForm
+                {
+                    NoiDung = res.Data.NoiDung,
+                    HinhAnhUrl = res.Data.HinhAnhUrl,
+                    LoaiCauHoi = res.Data.LoaiCauHoi,
+                    KhoaHocId = res.Data.KhoaHocId,
+                    MonHoc = res.Data.MonHoc, // ĐÃ BỔ SUNG MAP MÔN HỌC TỪ DTO XUỐNG FORM
+                    MucDo = res.Data.MucDo,
+                    ChuDe = res.Data.ChuDe,
+                    GiaiThich = res.Data.GiaiThich,
+                    GiangVienId = res.Data.GiangVienId,
+                    DapAns = res.Data.DapAns.Select(d => new DapAnForm
+                    {
+                        NoiDung = d.NoiDung,
+                        HinhAnhUrl = d.HinhAnhUrl,
+                        LaDapAnDung = d.LaDapAnDung,
+                        ThuTu = d.ThuTu
+                    }).ToList()
+                };
+
+                QuestionInputType = !string.IsNullOrEmpty(ModelForm.HinhAnhUrl) ? "Image" : "Text";
+
+                // Set trạng thái cho list Đáp án
+                DapAnInputTypes = ModelForm.DapAns.Select(d => !string.IsNullOrEmpty(d.HinhAnhUrl) ? "Image" : "Text").ToList();
+            }
+        }
+        else
+        {
+            ModelForm.LoaiCauHoi = Enum.GetValues<EnumLoaiCauHoi>().FirstOrDefault();
+            ModelForm.MucDo = Enum.GetValues<EnumMucDo>().FirstOrDefault();
+            // Mặc định tạo 4 đáp án trắng cho tiện
+            for (int i = 0; i < 4; i++) AddDapAn();
+        }
+
+        // Mock ID Giảng viên (Thực tế lấy từ Context đăng nhập)
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Lấy ID từ Claim (Tương ứng với id truyền vào lúc login)
+            var userIdString = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (Guid.TryParse(userIdString, out Guid realUserId))
+            {
+                ModelForm.GiangVienId = realUserId;
+            }
+        }
+
+        IsLoading = false;
+    }
+
+    private void AddDapAn()
+    {
+        ModelForm.DapAns.Add(new DapAnForm { ThuTu = ModelForm.DapAns.Count + 1 });
+        DapAnInputTypes.Add("Text");
+    }
+
+    private void RemoveDapAn(DapAnForm dapAn)
+    {
+        var index = ModelForm.DapAns.IndexOf(dapAn);
+        if (index >= 0)
+        {
+            ModelForm.DapAns.RemoveAt(index);
+            DapAnInputTypes.RemoveAt(index);
+        }
+    }
+
+    private async Task Save()
+    {
+        if (ModelForm.DapAns.Count < 2)
+        {
+            ToastService.ShowWarning("Câu hỏi phải có ít nhất 2 đáp án.");
+            return;
+        }
+        if (!ModelForm.DapAns.Any(x => x.LaDapAnDung))
+        {
+            ToastService.ShowWarning("Vui lòng đánh dấu ít nhất 1 đáp án đúng.");
+            return;
+        }
+
+        // Validation nhẹ: Bắt buộc chọn 1 trong 2 để đề thi không bị lỗi
+        if (ModelForm.MonHoc == null && (ModelForm.KhoaHocId == null || ModelForm.KhoaHocId == Guid.Empty))
+        {
+            ToastService.ShowWarning("Vui lòng chọn Môn học HOẶC Khóa học cho câu hỏi này.");
+            return;
+        }
+
+        // Cập nhật lại thứ tự
+        for (int i = 0; i < ModelForm.DapAns.Count; i++) ModelForm.DapAns[i].ThuTu = i + 1;
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Id.HasValue ? $"/CauHoi/{Id.Value}" : "/CauHoi",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            if (Id.HasValue)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu câu hỏi thành công!");
+                GoBack();
+            }
+            else ToastService.ShowError("Có lỗi xảy ra khi lưu.");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/nghiep-vu/quan-ly-cau-hoi");
+}

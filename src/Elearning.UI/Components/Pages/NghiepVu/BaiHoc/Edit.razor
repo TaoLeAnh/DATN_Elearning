@@ -1,0 +1,226 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="12">
+                    <FluentTextField @bind-Value="ModelForm.TieuDe" Label="Tiêu đề bài học (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.TieuDe)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="ChuongOption"
+                                        Label="Thuộc chương học (*)"
+                                        OnOptionsSearch="OnSearchChuong"
+                                        OptionText="@(item => item.TenChuong)"
+                                        @bind-SelectedOptions="SelectedChuongs"
+                                        MaximumSelectedOptions="1"
+                                        Placeholder="Gõ để tìm tên chương học..."
+                                        Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.ChuongHocId)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentSelect Label="Loại bài học"
+                                  TOption="string"
+                                  Value="@ModelForm.Loai.ToString()"
+                                  ValueChanged="@(v => ModelForm.Loai = Enum.Parse<EnumLoaiBaiHoc>(v))"
+                                  Style="width: 100%;">
+                        @foreach (var item in Enum.GetValues<EnumLoaiBaiHoc>())
+                        {
+                            <FluentOption Value="@item.ToString()">@item.ToString()</FluentOption>
+                        }
+                    </FluentSelect>
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentNumberField @bind-Value="ModelForm.ThoiLuong" Label="Thời lượng (phút) (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.ThoiLuong)" Style="color:red;" />
+                </FluentGridItem>
+
+                @if (ModelForm.Loai == EnumLoaiBaiHoc.Video)
+                {
+                    <FluentGridItem md="12">
+                        <FluentTextField @bind-Value="ModelForm.VideoUrl" Label="URL Video (Youtube/Vimeo)" Style="width: 100%;" />
+                        <ValidationMessage For="@(() => ModelForm.VideoUrl)" Style="color:red;" />
+                    </FluentGridItem>
+                }
+
+                <FluentGridItem md="12">
+                    <FluentTextArea @bind-Value="ModelForm.NoiDung" Label="Nội dung bài học" Rows="5" Style="width: 100%;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="4">
+                    <FluentNumberField @bind-Value="ModelForm.ThuTu" Label="Thứ tự (*)" Style="width: 100%;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private BaiHocForm ModelForm = new();
+
+    public class ChuongOption
+    {
+        public Guid Id { get; set; }
+        public string TenChuong { get; set; } = string.Empty;
+    }
+
+    private IEnumerable<ChuongOption> _selectedChuongs = new List<ChuongOption>();
+    private IEnumerable<ChuongOption> SelectedChuongs
+    {
+        get => _selectedChuongs;
+        set
+        {
+            _selectedChuongs = value;
+            ModelForm.ChuongHocId = _selectedChuongs.FirstOrDefault()?.Id ?? Guid.Empty;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/BaiHoc/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<BaiHocDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    // Chuyển dữ liệu từ Dto sang Form
+                    ModelForm = new BaiHocForm
+                    {
+                        TieuDe = res.Data.TieuDe,
+                        NoiDung = res.Data.NoiDung,
+                        VideoUrl = res.Data.VideoUrl,
+                        Loai = res.Data.Loai,
+                        ThoiLuong = res.Data.ThoiLuong,
+                        ChuongHocId = res.Data.ChuongHocId,
+                        ThuTu = res.Data.ThuTu
+                    };
+
+                    if (ModelForm.ChuongHocId != Guid.Empty)
+                    {
+                        var reqC = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/ChuongHoc/{ModelForm.ChuongHocId}", HasAuthorization = true };
+                        var resC = await CallService.Get<ChuongHocDto>(reqC);
+                        if (resC.Data != null)
+                        {
+                            _selectedChuongs = new List<ChuongOption> {
+                                new ChuongOption { Id = resC.Data.Id, TenChuong = resC.Data.TenChuong }
+                            };
+                        }
+                    }
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchChuong(OptionsSearchEventArgs<ChuongOption> e)
+    {
+        var query = new { SearchText = e.Text, PageIndex = 1, PageSize = 20 };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/ChuongHoc/getpaged", HasAuthorization = true };
+
+        var res = await CallService.Post<DataTableJson<ChuongHocDto>>(req, query);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new ChuongOption
+            {
+                Id = x.Id,
+                TenChuong = x.TenChuong
+            }).ToList();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (ModelForm.ChuongHocId == Guid.Empty)
+        {
+            ToastService.ShowWarning("Vui lòng chọn chương học.");
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/BaiHoc/{Content.Id}" : "/BaiHoc",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

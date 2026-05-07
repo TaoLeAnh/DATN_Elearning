@@ -1,0 +1,434 @@
+﻿@page
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@model IndexModel
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<style>
+    .banner-tuu-truong {
+        background-image: url('/img/banner.png');
+        background-size: cover; 
+        background-position: center center; 
+        background-repeat: no-repeat;
+        border-radius: 12px;
+        padding: 40px 20px; 
+        color: #ffffff; 
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+        .banner-tuu-truong i {
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
+        }
+    /* Thu nhỏ và bo tròn thanh cuộn */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px; /* Chiều ngang siêu mỏng */
+    }
+
+    /* Phần nền tảng bên dưới thanh cuộn */
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    /* Phần thanh cuộn di chuyển được */
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #d1d5db; /* Màu xám nhạt tinh tế */
+        border-radius: 10px; /* Bo tròn 2 đầu */
+    }
+
+        /* Đổi màu xíu khi di chuột vào thanh cuộn */
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+</style>
+
+@* --- SECTION 1: HERO (BANNER & MENU) --- *@
+<section class="hero-section">
+    <div class="container">
+        <div class="row g-3">
+            <div class="col-lg-3 d-none d-lg-block">
+                <div class="hero-menu">
+                    <div class="menu-header">
+                        <i class="fa-solid fa-bars me-2"></i> Các khóa học
+                    </div>
+                    <div class="list-group list-group-flush custom-scrollbar" style="max-height: 350px; overflow-y: auto;">
+                        @foreach (MonHocEnum mon in Enum.GetValues(typeof(MonHocEnum)))
+                        {
+                            string iconClass = mon switch
+                            {
+                                MonHocEnum.Toan => "fa-calculator text-primary",
+                                MonHocEnum.NguVan => "fa-book-open text-info",
+                                MonHocEnum.TiengAnh => "fa-language text-danger",
+                                MonHocEnum.VatLy => "fa-magnet text-warning",
+                                MonHocEnum.HoaHoc => "fa-flask text-success",
+                                MonHocEnum.SinhHoc => "fa-leaf text-success",
+                                MonHocEnum.LichSu => "fa-landmark text-secondary",
+                                MonHocEnum.DiaLy => "fa-globe text-primary",
+                                MonHocEnum.GDCD => "fa-scale-balanced text-warning",
+                                MonHocEnum.KhoaHocVaDocHieu => "fa-microscope text-info",
+                                _ => "fa-graduation-cap text-secondary"
+                            };
+
+                            <a href="/danh-sach-khoa-hoc?monHoc=@((int)mon)" class="list-group-item list-group-item-action border-0 py-3">
+                                <i class="fa-solid @iconClass me-3" style="width: 20px; text-align: center;"></i>
+                                <span class="fw-semibold">@Model.GetTenMonHoc(mon)</span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7 col-md-8">
+                <div id="heroCarousel" class="carousel slide h-100 shadow-sm rounded overflow-hidden" data-bs-ride="carousel">
+                    <div class="carousel-inner h-100">
+                        <div class="carousel-item active h-100">
+                            <img src="~/img/bannertop1.png" class="d-block w-100 h-100" style="object-fit:cover;" alt="...">
+                        </div>
+                        <div class="carousel-item h-100">
+                            <img src="~/img/bannertop2.png" class="d-block w-100 h-100" style="object-fit:cover;" alt="...">
+                        </div>
+                        <div class="carousel-item h-100">
+                            <img src="~/img/bannertop3.png" class="d-block w-100 h-100" style="object-fit:cover;" alt="...">
+                        </div>
+                        <div class="carousel-item h-100">
+                            <img src="~/img/bannertop4.png" class="d-block w-100 h-100" style="object-fit:cover;" alt="...">
+                        </div>
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-4 hero-right-banners d-flex flex-column gap-3">
+                <a href="#">
+                    <img src="~/img/bannerright.png" class="w-100 rounded shadow-sm" style="height: 343px;" alt="...">
+                </a>
+
+                <a href="/danh-sach-khoa-hoc" class="btn btn-danger fw-bold text-uppercase shadow w-100 d-flex align-items-center justify-content-center" style="height: 60px; border-radius: 10px; font-size: 0.9rem; transition: 0.3s;">
+                    <i class="fa-solid fa-pen-to-square me-2 fs-4"></i> ĐĂNG KÝ NGAY
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* --- SECTION 2: STATS --- *@
+<section class="container my-5">
+    <div class="banner-tuu-truong d-flex justify-content-around align-items-center flex-wrap gap-4">
+
+        <div class="text-center">
+            <i class="fa-solid fa-graduation-cap fa-3x text-warning mb-3"></i>
+            <h3 class="fw-bold mb-1">Mùa tựu trường</h3>
+            <p class="fs-5 mb-0">Bứt phá điểm số ngay</p>
+        </div>
+
+        <div class="border-end border-2 border-white d-none d-md-block" style="height: 80px; opacity: 0.3;"></div>
+
+        <div class="text-center">
+            <i class="fa-solid fa-users fa-3x mb-3 text-white"></i>
+            <h3 class="fw-bold mb-1">@Model.TongSoHocVien.ToString("N0").Replace(",", ".")</h3>
+            <p class="fs-5 mb-0">Học viên tin dùng</p>
+        </div>
+
+        <div class="border-end border-2 border-white d-none d-md-block" style="height: 80px; opacity: 0.3;"></div>
+
+        <div class="text-center">
+            <i class="fa-solid fa-award fa-3x mb-3 text-white"></i>
+            <p class="fs-5 mb-1">Đăng ký hôm nay</p>
+            <h3 class="fw-bold mb-0 text-warning">Nhận ngay đặc quyền</h3>
+        </div>
+
+    </div>
+</section>
+
+@* --- SECTION 3: KHÁM PHÁ THEO MÔN --- *@
+<section class="container mt-5 mb-5">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4" style="border-left: 5px solid #28b1ff; padding-left: 15px;">
+        <h3 class="fw-bold mb-0 text-dark">Khám phá khóa học theo môn</h3>
+
+        <ul class="nav nav-pills mt-3 mt-md-0" id="subject-tabs" role="tablist">
+            @{
+                var isFirstCourseTab = true;
+            }
+            @if (Model.DictKhoaHocTheoMon != null && Model.DictKhoaHocTheoMon.Any())
+            {
+                foreach (var monHoc in Model.DictKhoaHocTheoMon.Keys)
+                {
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(isFirstCourseTab ? "active" : "") fw-bold rounded-pill px-4"
+                                id="tab-@monHoc.ToString()" data-bs-toggle="pill"
+                                data-bs-target="#pane-@monHoc.ToString()" type="button" role="tab">
+                            @Model.GetTenMonHoc(monHoc)
+                        </button>
+                    </li>
+                    isFirstCourseTab = false;
+                }
+            }
+        </ul>
+    </div>
+
+    <div class="tab-content" id="subject-tabs-content">
+        @{
+            var isFirstCoursePane = true;
+        }
+        @if (Model.DictKhoaHocTheoMon != null && Model.DictKhoaHocTheoMon.Any())
+        {
+            foreach (var monHoc in Model.DictKhoaHocTheoMon.Keys)
+            {
+                var lstKhoaHoc = Model.DictKhoaHocTheoMon[monHoc];
+                var strMonHoc = monHoc.ToString();
+
+                <div class="tab-pane fade @(isFirstCoursePane ? "show active" : "")" id="pane-@strMonHoc" role="tabpanel">
+                    <div class="d-flex flex-column flex-lg-row gap-3 mb-3">
+                        <div class="w-40-custom">
+                            <div class="rounded shadow-sm d-flex flex-column justify-content-center align-items-center text-white h-100"
+                                 style="background: linear-gradient(135deg, #e52d27 0%, #b31217 100%); min-height: 260px;">
+                                <img src="~/img/bannersub.png" class="w-100" alt="...">
+                            </div>
+                        </div>
+                        <div class="w-60-custom position-relative">
+                            <div class="swiper swiper-subject-@strMonHoc h-100 px-1 py-2">
+                                <div class="swiper-wrapper">
+                                    @foreach (var item in lstKhoaHoc)
+                                    {
+                                        <div class="swiper-slide h-auto">
+                                            <a href="/CourseDetail?id=@item.Id" class="text-decoration-none text-dark d-block h-100">
+                                                <div class="card h-100 course-card shadow-sm c-thpt">
+                                                    <div class="position-relative w-100 overflow-hidden" style="height: 160px; background-color: #0072bc; border-top-left-radius: inherit; border-top-right-radius: inherit;">
+                                                        @if (!string.IsNullOrEmpty(item.HinhAnhUrl))
+                                                        {
+                                                            <img src="@item.HinhAnhUrl" class="w-100 h-100" style="object-fit: cover;" alt="@item.TenKhoaHoc" />
+                                                        }
+                                                        <span class="badge bg-light text-primary position-absolute top-0 end-0 m-2 border">Top class</span>
+                                                    </div>
+                                                    <div class="card-body d-flex flex-column p-3">
+                                                        <h6 class="card-title fw-bold text-truncate-2 mb-2">@item.TenKhoaHoc</h6>
+                                                        <small class="text-muted mb-3">GV: @(string.IsNullOrEmpty(item.TenGiangVien) ? "Đang cập nhật" : item.TenGiangVien)</small>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="swiper-button-prev custom-nav-btn swiper-prev-@strMonHoc"></div>
+                            <div class="swiper-button-next custom-nav-btn swiper-next-@strMonHoc"></div>
+                        </div>
+                    </div>
+                </div>
+                isFirstCoursePane = false;
+            }
+        }
+    </div>
+</section>
+
+@* --- SECTION 4: KHÓA HỌC NỔI BẬT (HOT) --- *@
+<section class="container mb-5">
+    <div class="mt-5 mb-3" style="border-left: 5px solid #ff9800; padding-left: 15px;">
+        <h4 class="fw-bold mb-0 text-dark">Khóa học nổi bật</h4>
+    </div>
+    <div class="row no-mg position-relative mt-2">
+        <div class="col-12 px-0">
+            <div class="swiper swiper-row-2 px-1 py-2">
+                <div class="swiper-wrapper">
+                    @if (Model.LstKhoaHocTHCS != null && Model.LstKhoaHocTHCS.Any())
+                    {
+                        foreach (var item in Model.LstKhoaHocTHCS)
+                        {
+                            <div class="swiper-slide h-auto">
+                                <a href="/CourseDetail?id=@item.Id" class="text-decoration-none text-dark d-block h-100">
+                                    <div class="card h-100 course-card shadow-sm c-thcs">
+                                        <div class="position-relative w-100 overflow-hidden" style="height: 160px; background-color: #17a2b8; border-top-left-radius: inherit; border-top-right-radius: inherit;">
+                                            @if (!string.IsNullOrEmpty(item.HinhAnhUrl))
+                                            {
+                                                <img src="@item.HinhAnhUrl" class="w-100 h-100" style="object-fit: cover;" alt="@item.TenKhoaHoc" />
+                                            }
+                                            <span class="badge bg-danger position-absolute top-0 start-0 m-2">HOT</span>
+                                        </div>
+                                        <div class="card-body d-flex flex-column p-3">
+                                            <h6 class="card-title fw-bold text-truncate-2 mb-2">@item.TenKhoaHoc</h6>
+                                            <small class="text-muted mb-3">GV: @(string.IsNullOrEmpty(item.TenGiangVien) ? "Đang cập nhật" : item.TenGiangVien)</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="swiper-button-prev custom-nav-btn swiper-prev-2"></div>
+            <div class="swiper-button-next custom-nav-btn swiper-next-2"></div>
+        </div>
+    </div>
+</section>
+
+@* --- SECTION 5: HỌC CÙNG THẦY CÔ (GIÁO VIÊN - KHUNG ĐỎ) --- *@
+<section class="container mt-5 mb-5">
+    <div class="text-center mb-4">
+        <h2 class="teacher-section-title fw-bold text-uppercase mb-2">Học cùng thầy cô chất lượng </h2>
+        <h5 class="fw-bold text-dark">Giàu kinh nghiệm, luôn luôn đồng hành cùng các sĩ tử trong kỳ thi tới</h5>
+    </div>
+
+    @if (Model.DictGiaoVienTheoMon != null)
+    {
+        var hang1 = new List<MonHocEnum> {
+        MonHocEnum.Toan, MonHocEnum.NguVan, MonHocEnum.TiengAnh,
+        MonHocEnum.VatLy, MonHocEnum.HoaHoc, MonHocEnum.SinhHoc
+        };
+        var hang2 = new List<MonHocEnum> {
+        MonHocEnum.LichSu, MonHocEnum.DiaLy, MonHocEnum.KhoaHocVaDocHieu
+        };
+        var isFirstGvBtn = true;
+
+        @* HÀNG 1: Nằm ngoài khung đỏ *@
+        <div class="subject-tabs-row1 d-flex flex-wrap justify-content-center gap-3">
+            @foreach (var mon in hang1)
+            {
+                <button class="btn btn-subject @(isFirstGvBtn ? "active" : "")" data-subject="@Model.GetSubjectKey(mon)">
+                    @Model.GetTenMonHoc(mon).ToUpper()
+                </button>
+                isFirstGvBtn = false;
+            }
+        </div>
+
+        <div class="teacher-main-box shadow-lg">
+            @* HÀNG 2: Nằm trong khung đỏ (trên hàng kẻ) *@
+            <div class="subject-tabs-row2 d-flex flex-wrap justify-content-center gap-3 mb-4">
+                @foreach (var mon in hang2)
+                {
+                    <button class="btn btn-subject" data-subject="@Model.GetSubjectKey(mon)">
+                        @Model.GetTenMonHoc(mon).ToUpper()
+                    </button>
+                }
+            </div>
+
+            <div id="subjectContentContainer">
+                @{
+                    var isFirstGvPane = true;
+                }
+                @foreach (MonHocEnum monHoc in Enum.GetValues(typeof(MonHocEnum)))
+                {
+                    var subKey = Model.GetSubjectKey(monHoc);
+                    var dsGiaoVien = Model.DictGiaoVienTheoMon.ContainsKey(monHoc) ? Model.DictGiaoVienTheoMon[monHoc] : new List<HoSoGiaoVienDto>();
+
+                    <div class="subject-pane @(isFirstGvPane ? "active" : "")" id="subject-@subKey">
+                        <div class="row g-5 align-items-start">
+                            @if (dsGiaoVien.Any())
+                            {
+                                var gvDauTien = dsGiaoVien.First();
+                                <div class="col-lg-4 text-center">
+                                    <img src="@(string.IsNullOrEmpty(gvDauTien.AnhDaiDienUrl) ? "https://placehold.co/400x500?text=No+Image" : gvDauTien.AnhDaiDienUrl)"
+                                         class="teacher-img-main mb-4 main-img-control">
+
+                                    <div class="teacher-thumbnails d-flex justify-content-center gap-3">
+                                        @for (int i = 0; i < dsGiaoVien.Count; i++)
+                                        {
+                                            var gv = dsGiaoVien[i];
+                                            <div class="thumb-item @(i == 0 ? "active" : "")"
+                                                 data-target="info-@subKey-@i"
+                                                 data-img="@gv.AnhDaiDienUrl"
+                                                 style="background-image: url('@gv.AnhDaiDienUrl'); background-size: cover;">
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-8 text-white">
+                                    @for (int i = 0; i < dsGiaoVien.Count; i++)
+                                    {
+                                        var gv = dsGiaoVien[i];
+                                        <div id="info-@subKey-@i" class="teacher-info-pane @(i == 0 ? "active" : "")">
+                                            <h2 class="fw-bold mb-4">@gv.TenGiaoVien</h2>
+                                            <div class="teacher-info-box mb-4">
+                                                <h5>Thành tích nổi bật</h5>
+                                                <p>@Html.Raw(gv.ThanhTichNoiBat?.Replace("\n", "<br/>"))</p>
+                                            </div>
+                                            <div class="teacher-info-box">
+                                                <h5>Phương pháp giảng dạy</h5>
+                                                <p>@Html.Raw(gv.PhuongPhapGiangDay?.Replace("\n", "<br/>"))</p>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-12 text-center text-white py-5">
+                                    <p>Dữ liệu giáo viên môn học này đang được cập nhật...</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    isFirstGvPane = false;
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Swiper cho các tab môn học (Khối THPT)
+            const swipers = document.querySelectorAll('.swiper[class*="swiper-subject-"]');
+            swipers.forEach(function(swiperEl) {
+                const classList = swiperEl.className.split(' ');
+                const targetClass = classList.find(c => c.startsWith('swiper-subject-'));
+                const subjectId = targetClass.replace('swiper-subject-', '');
+                new Swiper("." + targetClass, {
+                    slidesPerView: 1.2, spaceBetween: 15,
+                    autoplay: { delay: 3500, disableOnInteraction: false },
+                    observer: true, observeParents: true,
+                    navigation: { nextEl: ".swiper-next-" + subjectId, prevEl: ".swiper-prev-" + subjectId },
+                    breakpoints: { 768: { slidesPerView: 2 }, 992: { slidesPerView: 3 } }
+                });
+            });
+
+            // 2. Swiper cho Khối THCS (Khóa học nổi bật)
+            new Swiper(".swiper-row-2", {
+                slidesPerView: 2, spaceBetween: 15,
+                autoplay: { delay: 3000 },
+                navigation: { nextEl: ".swiper-next-2", prevEl: ".swiper-prev-2" },
+                breakpoints: { 768: { slidesPerView: 3 }, 1200: { slidesPerView: 5 } }
+            });
+
+            // 3. Chuyển Tabs Môn học (Khối Giáo viên)
+            const subjectButtons = document.querySelectorAll('.btn-subject');
+            const subjectPanes = document.querySelectorAll('.subject-pane');
+            subjectButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    subjectButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const target = this.getAttribute('data-subject');
+                    subjectPanes.forEach(pane => pane.classList.remove('active'));
+                    const targetPane = document.getElementById('subject-' + target);
+                    if(targetPane) targetPane.classList.add('active');
+                });
+            });
+
+            // 4. Chuyển Giáo viên trong Môn (Ảnh thu nhỏ)
+            document.getElementById('subjectContentContainer').addEventListener('click', function(e) {
+                const thumb = e.target.closest('.thumb-item');
+                if (!thumb) return;
+                const parent = thumb.closest('.subject-pane');
+                parent.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+                const newImg = thumb.getAttribute('data-img');
+                const mainImg = parent.querySelector('.main-img-control');
+                if (mainImg) mainImg.src = (newImg && newImg !== "") ? newImg : "https://placehold.co/400x500?text=No+Image";
+                const targetId = thumb.getAttribute('data-target');
+                const targetPane = document.getElementById(targetId);
+                if (targetPane) {
+                    parent.querySelectorAll('.teacher-info-pane').forEach(p => p.classList.remove('active'));
+                    targetPane.classList.add('active');
+                }
+            });
+        });
+    </script>
+}

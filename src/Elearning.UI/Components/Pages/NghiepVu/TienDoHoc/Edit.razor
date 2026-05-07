@@ -1,0 +1,158 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2">
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="LookupOption" Label="Học viên (*)"
+                                        OnOptionsSearch="OnSearchNguoiDung" OptionText="@(i => i.Name)"
+                                        @bind-SelectedOptions="SelectedNguoiDungs" MaximumSelectedOptions="1"
+                                        Disabled="@Content.IsEditMode" Style="width: 100%;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="LookupOption" Label="Bài học (*)"
+                                        OnOptionsSearch="OnSearchBaiHoc" OptionText="@(i => i.Name)"
+                                        @bind-SelectedOptions="SelectedBaiHocs" MaximumSelectedOptions="1"
+                                        Disabled="@Content.IsEditMode" Style="width: 100%;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentSwitch @bind-Value="ModelForm.DaHoanThanh" Label="Đã hoàn thành bài học" Style="margin-top: 10px;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentNumberField @bind-Value="ModelForm.LastTimePosition" Label="Lưu thời gian xem (giây)" Style="width: 100%;" />
+                </FluentGridItem>
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private TienDoHocForm ModelForm = new();
+
+    public class LookupOption { public Guid Id { get; set; } public string Name { get; set; } = ""; }
+
+    private IEnumerable<LookupOption> _selectedNguoiDungs = new List<LookupOption>();
+    private IEnumerable<LookupOption> SelectedNguoiDungs { get => _selectedNguoiDungs; set { _selectedNguoiDungs = value; ModelForm.NguoiDungId = _selectedNguoiDungs.FirstOrDefault()?.Id ?? Guid.Empty; } }
+
+    private IEnumerable<LookupOption> _selectedBaiHocs = new List<LookupOption>();
+    private IEnumerable<LookupOption> SelectedBaiHocs { get => _selectedBaiHocs; set { _selectedBaiHocs = value; ModelForm.BaiHocId = _selectedBaiHocs.FirstOrDefault()?.Id ?? Guid.Empty; } }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/TienDoHoc/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<TienDoHocDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm = new TienDoHocForm { NguoiDungId = res.Data.NguoiDungId, BaiHocId = res.Data.BaiHocId, DaHoanThanh = res.Data.DaHoanThanh, LastTimePosition = res.Data.LastTimePosition };
+
+                    var resND = await CallService.Get<NguoiDungDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/NguoiDung/{ModelForm.NguoiDungId}", HasAuthorization = true });
+                    if (resND.Data != null) _selectedNguoiDungs = new List<LookupOption> { new LookupOption { Id = resND.Data.Id, Name = resND.Data.Ten } };
+
+                    var resBH = await CallService.Get<BaiHocDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/BaiHoc/{ModelForm.BaiHocId}", HasAuthorization = true });
+                    if (resBH.Data != null) _selectedBaiHocs = new List<LookupOption> { new LookupOption { Id = resBH.Data.Id, Name = resBH.Data.TieuDe } };
+                }
+            }
+            IsLoading = false; StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchNguoiDung(OptionsSearchEventArgs<LookupOption> e)
+    {
+        var res = await CallService.Post<DataTableJson<NguoiDungDto>>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/NguoiDung/getpaged", HasAuthorization = true }, new { SearchText = e.Text, PageIndex = 1, PageSize = 20 });
+        if (res.Status == StatusCode.OK && res.Data?.Data != null) e.Items = res.Data.Data.Select(x => new LookupOption { Id = x.Id, Name = x.Ten }).ToList();
+    }
+
+    private async Task OnSearchBaiHoc(OptionsSearchEventArgs<LookupOption> e)
+    {
+        var res = await CallService.Post<DataTableJson<BaiHocDto>>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/BaiHoc/getpaged", HasAuthorization = true }, new { SearchText = e.Text, PageIndex = 1, PageSize = 20 });
+        if (res.Status == StatusCode.OK && res.Data?.Data != null) e.Items = res.Data.Data.Select(x => new LookupOption { Id = x.Id, Name = x.TieuDe }).ToList();
+    }
+
+    private async Task Save()
+    {
+        if (ModelForm.NguoiDungId == Guid.Empty || ModelForm.BaiHocId == Guid.Empty)
+        {
+            ToastService.ShowWarning("Vui lòng chọn học viên và bài học.");
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/TienDoHoc/{Content.Id}" : "/TienDoHoc",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowError(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

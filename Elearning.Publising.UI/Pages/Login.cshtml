@@ -1,0 +1,185 @@
+﻿@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Đăng nhập / Tạo tài khoản";
+    Layout = "_Layout"; // Thay bằng layout của bạn nếu cần
+}
+
+<div class="container mt-5 mb-5 d-flex justify-content-center">
+    <div class="card shadow-lg border-0" style="width: 100%; max-width: 450px; border-radius: 16px;">
+        <div class="card-body p-5">
+
+            <div class="text-center mb-4">
+                <h3 class="fw-bold" style="color: #1a365d;">Đăng nhập / Tạo tài khoản</h3>
+                <p class="text-muted" id="subTitle">Nhập email để tiếp tục</p>
+            </div>
+
+            <button type="button" id="btnBack" class="btn btn-link text-decoration-none p-0 mb-3" style="display: none;">
+                <i class="fa-solid fa-arrow-left me-1"></i> Đổi Email khác
+            </button>
+
+            <form id="authForm" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" id="actionType" name="Input.ActionType" value="CHECK" />
+
+                <div class="mb-4" id="emailGroup">
+                    <label class="form-label fw-bold">Email</label>
+                    <input type="email" id="txtEmail" name="Input.Email" class="form-control form-control-lg" placeholder="example@example.com" required>
+                </div>
+
+                <div id="passwordGroup" style="display: none;">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Mật khẩu</label>
+                        <input type="password" id="txtPassword" name="Input.Password" class="form-control form-control-lg" placeholder="Nhập mật khẩu">
+                    </div>
+                </div>
+
+                <div id="confirmPasswordGroup" style="display: none;">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Xác nhận mật khẩu</label>
+                        <input type="password" id="txtConfirmPassword" name="Input.ConfirmPassword" class="form-control form-control-lg" placeholder="Nhập lại mật khẩu">
+                        <div id="passwordError" class="text-danger small mt-1" style="display: none;">Mật khẩu không khớp!</div>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" id="btnSubmit" class="btn btn-lg text-white fw-bold" style="background-color: #1a365d; border-radius: 8px;">
+                        Tiếp tục
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const authForm = document.getElementById('authForm');
+            const actionType = document.getElementById('actionType');
+
+            const emailGroup = document.getElementById('emailGroup');
+            const txtEmail = document.getElementById('txtEmail');
+
+            const passwordGroup = document.getElementById('passwordGroup');
+            const txtPassword = document.getElementById('txtPassword');
+
+            const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+            const txtConfirmPassword = document.getElementById('txtConfirmPassword');
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            const btnBack = document.getElementById('btnBack');
+            const subTitle = document.getElementById('subTitle');
+            const passwordError = document.getElementById('passwordError');
+
+            let currentMode = 'CHECK'; // Các trạng thái: CHECK, LOGIN, REGISTER
+
+            // SỰ KIỆN: KHI BẤM NÚT QUAY LẠI
+            btnBack.addEventListener('click', function() {
+                currentMode = 'CHECK';
+                actionType.value = 'CHECK';
+
+                // Khôi phục giao diện ban đầu
+                txtEmail.readOnly = false;
+                emailGroup.style.display = 'block';
+                passwordGroup.style.display = 'none';
+                confirmPasswordGroup.style.display = 'none';
+                btnBack.style.display = 'none';
+
+                txtPassword.removeAttribute('required');
+                txtConfirmPassword.removeAttribute('required');
+
+                btnSubmit.innerText = 'Tiếp tục';
+                subTitle.innerText = 'Nhập email để tiếp tục';
+            });
+
+            // SỰ KIỆN: KHI FORM ĐƯỢC SUBMIT
+            authForm.addEventListener('submit', async function (e) {
+
+                // Nếu đang ở Bước 1: Kiểm tra Email
+                if (currentMode === 'CHECK') {
+                    e.preventDefault(); // Ngăn form tự động chuyển trang
+
+                    const emailVal = txtEmail.value.trim();
+                    if (!emailVal) return;
+
+                    // Hiệu ứng loading nút
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+                    // Lấy token bảo mật của Razor Pages
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                    try {
+                        // Gọi AJAX xuống Backend để check Email
+                        const response = await fetch('?handler=CheckEmail', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': token
+                            },
+                            body: JSON.stringify({ Email: emailVal })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Chuyển giao diện
+                            txtEmail.readOnly = true; // Khóa ô email lại
+                            btnBack.style.display = 'inline-block'; // Hiện nút quay lại đổi email
+
+                            if (result.exists) {
+                                // MÀN HÌNH ĐĂNG NHẬP
+                                currentMode = 'LOGIN';
+                                actionType.value = 'LOGIN';
+
+                                passwordGroup.style.display = 'block';
+                                txtPassword.setAttribute('required', 'true');
+
+                                subTitle.innerText = 'Chào mừng trở lại! Vui lòng nhập mật khẩu.';
+                                btnSubmit.innerText = 'Đăng nhập';
+                            } else {
+                                // MÀN HÌNH ĐĂNG KÝ
+                                currentMode = 'REGISTER';
+                                actionType.value = 'REGISTER';
+
+                                passwordGroup.style.display = 'block';
+                                confirmPasswordGroup.style.display = 'block';
+                                txtPassword.setAttribute('required', 'true');
+                                txtConfirmPassword.setAttribute('required', 'true');
+
+                                subTitle.innerText = 'Tạo tài khoản mới cực nhanh.';
+                                btnSubmit.innerText = 'Đăng ký tài khoản';
+                            }
+                        } else {
+                            alert("Lỗi: " + result.message);
+                        }
+                    } catch (error) {
+                        console.error('Lỗi mạng:', error);
+                        alert("Không thể kết nối đến máy chủ.");
+                    } finally {
+                        btnSubmit.disabled = false;
+                        if(currentMode === 'CHECK') btnSubmit.innerText = 'Tiếp tục';
+                    }
+                }
+                // Nếu đang ở Bước Đăng ký
+                else if (currentMode === 'REGISTER') {
+                    // Chặn lại nếu mật khẩu nhập không khớp bằng Javascript
+                    if (txtPassword.value !== txtConfirmPassword.value) {
+                        e.preventDefault();
+                        passwordError.style.display = 'block';
+                    } else {
+                        passwordError.style.display = 'none';
+                        // Để form submit bình thường xuống OnPostAsync
+                    }
+                }
+                // Nếu đang ở Bước Đăng nhập
+                else if (currentMode === 'LOGIN') {
+                    // Để form submit bình thường xuống OnPostAsync
+                }
+            });
+        });
+    </script>
+}

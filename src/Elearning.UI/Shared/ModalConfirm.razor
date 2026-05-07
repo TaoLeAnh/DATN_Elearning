@@ -1,0 +1,75 @@
+﻿
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Microsoft.FluentUI.AspNetCore.Components
+@implements IDialogContentComponent<ModalConfirm.RequestModalConfirm>
+
+<FluentDialogHeader ShowDismiss="true" Style="padding-bottom:10px">
+    <h3>@Content.Title</h3>
+</FluentDialogHeader>
+
+<FluentDialogBody style="margin: 0; padding: 16px;">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="gap: 12px;">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Warning())" Color="Color.Warning" />
+        <FluentStack Orientation="Orientation.Vertical" Style="gap: 4px;">
+            <p style="margin: 0; line-height: 1.5;">@Content.Content</p>
+        </FluentStack>
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter Style="padding-top:15px">
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Right" Style="gap: 10px; width: 100%;">
+        @* Dùng OnClick thay vì @onclick nếu @onclick không ăn *@
+        <FluentButton Appearance="Appearance.Neutral"
+                      OnClick="@CancelDelete"
+                      Disabled="isDeleted">
+            @Content.ActionExist
+        </FluentButton>
+
+        <FluentButton BackgroundColor="@Content.ColorButton"
+                      Color="White"
+                      OnClick="@ConfirmDelete"
+                      Disabled="isDeleted">
+            @if (isDeleted)
+            {
+                <span>Đang xử lý...</span>
+            }
+            else
+            {
+                <span>@Content.Action</span>
+            }
+        </FluentButton>
+    </FluentStack>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public RequestModalConfirm Content { get; set; } = new();
+
+    private bool isDeleted = false;
+
+    private async Task ConfirmDelete()
+    {
+        isDeleted = true;
+        StateHasChanged();
+        // Gửi kết quả true về Index
+        await Dialog.CloseAsync(true);
+    }
+
+    private async Task CancelDelete()
+    {
+        // Gửi kết quả false về Index
+        await Dialog.CloseAsync(false);
+    }
+
+    public class RequestModalConfirm
+    {
+        public string Title { get; set; } = "Xác nhận xoá";
+        public string Content { get; set; } = "Bạn có chắc chắn muốn xoá vĩnh viễn bản ghi này không?";
+        public string Action { get; set; } = "Xóa";
+        public string ActionExist { get; set; } = "Hủy";
+        public string ColorButton { get; set; } = "red";
+    }
+}

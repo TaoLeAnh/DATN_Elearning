@@ -1,0 +1,93 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+@if (!IsLoading)
+{
+    <FluentDialogBody>
+        <FluentGrid Spacing="2" Style="padding: 4px;">
+            <FluentGridItem md="12">
+                <label style="font-weight:bold; color:gray">Tên khóa học:</label>
+                <div>@Item.TenKhoaHoc</div>
+            </FluentGridItem>
+            <FluentGridItem md="12">
+                <label style="font-weight:bold; color:gray">Mô tả:</label>
+                <div>@Item.MoTa</div>
+            </FluentGridItem>
+            <FluentGridItem md="12">
+                <label style="font-weight:bold; color:gray">Môn học:</label>
+                <div><FluentBadge Appearance="Appearance.Accent">@GetTenMonHoc(Item.MonHoc)</FluentBadge></div>
+            </FluentGridItem>
+            @* <FluentGridItem md="12">
+                <label style="font-weight:bold; color:gray">Giảng viên (ID):</label>
+                <div>@Item.GiangVienId</div>
+            </FluentGridItem> *@
+            <FluentGridItem md="6">
+                <label style="font-weight:bold; color:gray">Ngày tạo:</label>
+                <div>@Item.Created.ToString("HH:mm:ss dd/MM/yyyy")</div>
+            </FluentGridItem>
+        </FluentGrid>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+
+    private KhoaHocDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/KhoaHoc/{Content.Id}",
+                HasAuthorization = true
+            };
+            var res = await CallService.Get<KhoaHocDto>(req);
+            if (res.Status == StatusCode.OK && res.Data != null) Item = res.Data;
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+    private static string GetTenMonHoc(MonHocEnum monHoc)
+    {
+        return monHoc switch
+        {
+            MonHocEnum.Toan => "Toán học",
+            MonHocEnum.NguVan => "Ngữ văn",
+            MonHocEnum.TiengAnh => "Tiếng Anh",
+            MonHocEnum.VatLy => "Vật lí",
+            MonHocEnum.HoaHoc => "Hóa học",
+            MonHocEnum.SinhHoc => "Sinh học",
+            MonHocEnum.LichSu => "Lịch sử",
+            MonHocEnum.DiaLy => "Địa lí",
+            MonHocEnum.GDCD => "Giáo dục công dân",
+            MonHocEnum.KhoaHocVaDocHieu => "Khoa học & Đọc hiểu",
+            _ => "Chưa xác định"
+        };
+    }
+}

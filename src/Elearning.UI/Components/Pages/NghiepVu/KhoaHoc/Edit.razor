@@ -1,0 +1,278 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.UI.Application.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using System.Text.Json
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="12">
+                    <FluentTextField @bind-Value="ModelForm.TenKhoaHoc" Label="Tên khóa học (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.TenKhoaHoc)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <label style="font-weight:bold; margin-bottom: 5px; display:block;">Ảnh đại diện khóa học</label>
+                    <div style="margin-top: 5px;">
+                        <ImagePicker ImageUrl="@ModelForm.HinhAnhUrl"
+                                     Multiple="false"
+                                     OnChange="@((string url) => ModelForm.HinhAnhUrl = url)"
+                                     OnClear="@(() => ModelForm.HinhAnhUrl = string.Empty)" />
+                    </div>
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentNumberField TValue="decimal?" @bind-Value="ModelForm.GiaGoc" Label="Giá gốc (VNĐ)" Style="width: 100%;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentNumberField TValue="decimal?" @bind-Value="ModelForm.GiaBan" Label="Giá bán (Khuyến mãi - VNĐ)" Style="width: 100%;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentTextArea @bind-Value="ModelForm.MoTa" Label="Mô tả khóa học (*)" Rows="3" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.MoTa)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="MonHocOption"
+                                        Label="Môn học (*)"
+                                        OnOptionsSearch="OnSearchMonHoc"
+                                        OptionText="@(item => item.Name)"
+                                        @bind-SelectedOptions="SelectedMonHocs"
+                                        MaximumSelectedOptions="1"
+                                        Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.MonHoc)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="UserOption"
+                                        Label="Giảng viên phụ trách (*)"
+                                        OnOptionsSearch="OnSearchUser"
+                                        OptionText="@(item => item.Name)"
+                                        @bind-SelectedOptions="SelectedUsers"
+                                        MaximumSelectedOptions="1"
+                                        Style="width: 100%;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private KhoaHocForm ModelForm = new();
+
+    // Tạm thời bind Guid dạng string cho form nhập liệu nhanh
+    // private string GiangVienIdString
+    // {
+    //     get => ModelForm.GiangVienId == Guid.Empty ? "" : ModelForm.GiangVienId.ToString();
+    //     set => ModelForm.GiangVienId = Guid.TryParse(value, out Guid g) ? g : Guid.Empty;
+    // }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KhoaHoc/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<KhoaHocForm>(req);
+                if (res.Status == StatusCode.OK)
+                {
+                    ModelForm = res.Data;
+
+                    // Nếu là Edit, ta cần hiển thị tên giảng viên cũ lên Autocomplete
+                    if (ModelForm.GiangVienId != Guid.Empty)
+                    {
+                        // Gọi thêm API lấy chi tiết giảng viên theo ID để hiển thị Name
+                        var reqUser = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/NguoiDung/{ModelForm.GiangVienId}", HasAuthorization = true };
+                        var resUser = await CallService.Get<NguoiDungDto>(reqUser);
+                        if (resUser.Data != null)
+                        {
+                            _selectedUsers = new List<UserOption> { new UserOption { Id = resUser.Data.Id, Name = resUser.Data.Ten } };
+                        }
+                    }
+                    if (ModelForm.MonHoc != default)
+                    {
+                        _selectedMonHocs = AllMonHocs.Where(x => x.Id == ModelForm.MonHoc).ToList();
+                    }
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Save()
+    {
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/KhoaHoc/{Content.Id}" : "/KhoaHoc",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+    public class UserOption
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+    private IEnumerable<UserOption> _selectedUsers = new List<UserOption>();
+
+    private IEnumerable<UserOption> SelectedUsers
+    {
+        get => _selectedUsers;
+        set
+        {
+            _selectedUsers = value;
+            ModelForm.GiangVienId = _selectedUsers.FirstOrDefault()?.Id ?? Guid.Empty;
+        }
+    }
+    private async Task OnSearchUser(OptionsSearchEventArgs<UserOption> e)
+    {
+        var query = new
+        {
+            SearchText = e.Text,
+            PageIndex = 1,
+            PageSize = 50
+        };
+
+        var req = new ApiRequestModel
+        {
+            ApiService = ServicesRegistryEnum.ServicePortal,
+            Endpoint = "/NguoiDung/getpaged",
+            HasAuthorization = true
+        };
+
+        // SỬA Ở ĐÂY: Dùng kiểu mạnh DataTableJson<NguoiDungDto>
+        var res = await CallService.Post<DataTableJson<NguoiDungDto>>(req, query);
+
+        if (res.Status == StatusCode.OK && res.Data != null)
+        {
+            // Bây giờ res.Data.Data ĐÃ LÀ IEnumerable<NguoiDungDto>
+            // Không cần Deserialize thủ công nữa!
+            e.Items = res.Data.Data.Select(x => new UserOption
+            {
+                Id = x.Id,
+                Name = x.Ten
+            }).ToList();
+        }
+    }
+    public class MonHocOption
+    {
+        public MonHocEnum Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private IEnumerable<MonHocOption> _selectedMonHocs = new List<MonHocOption>();
+    private IEnumerable<MonHocOption> SelectedMonHocs
+    {
+        get => _selectedMonHocs;
+        set
+        {
+            _selectedMonHocs = value;
+            ModelForm.MonHoc = _selectedMonHocs.FirstOrDefault()?.Id ?? default;
+        }
+    }
+
+    // Khởi tạo danh sách môn học từ Enum
+    private List<MonHocOption> AllMonHocs = Enum.GetValues(typeof(MonHocEnum))
+        .Cast<MonHocEnum>()
+        .Select(e => new MonHocOption { Id = e, Name = GetTenMonHoc(e) })
+        .ToList();
+
+    private void OnSearchMonHoc(OptionsSearchEventArgs<MonHocOption> e)
+    {
+        // Tìm kiếm môn học theo tên (không phân biệt hoa thường)
+        e.Items = AllMonHocs.Where(x => x.Name.Contains(e.Text, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private static string GetTenMonHoc(MonHocEnum monHoc)
+    {
+        return monHoc switch
+        {
+            MonHocEnum.Toan => "Toán học",
+            MonHocEnum.NguVan => "Ngữ văn",
+            MonHocEnum.TiengAnh => "Tiếng Anh",
+            MonHocEnum.VatLy => "Vật lí",
+            MonHocEnum.HoaHoc => "Hóa học",
+            MonHocEnum.SinhHoc => "Sinh học",
+            MonHocEnum.LichSu => "Lịch sử",
+            MonHocEnum.DiaLy => "Địa lí",
+            MonHocEnum.GDCD => "Giáo dục công dân",
+            MonHocEnum.KhoaHocVaDocHieu => "Khoa học & Đọc hiểu",
+            _ => "Chưa xác định"
+        };
+    }
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

@@ -1,0 +1,20 @@
+﻿using Elearning.Shared.Commons.Model.SQL;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Elearning.Domain.Entities
+{
+    public class ChiTietBoCauHoi : BaseDomainEntity
+    {
+        public Guid BoCauHoiOnTapId { get; set; }
+
+        public Guid CauHoiId { get; set; }
+
+        public int ThuTu { get; set; }
+
+        public virtual BoCauHoiOnTap BoCauHoiOnTap { get; set; } = default!;
+
+        public virtual CauHoi CauHoi { get; set; } = default!;
+    }
+}

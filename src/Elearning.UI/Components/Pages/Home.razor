@@ -1,0 +1,81 @@
+﻿@page "/"
+@using Elearning.Shared.Commons.Model.Commons
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+@inject NavigationManager Navigation
+
+<PageTitle>Home</PageTitle>
+
+<div style="padding: 20px;">
+	<h2>Chào mừng đến với Bàn làm việc</h2>
+	<p>Màn hình chọn Module cũ đã được gỡ bỏ thành công!</p>
+
+</div>
+
+<style>
+	.stack-horizontal.body-stack .navmenu {
+		display:none
+	}
+
+	.notify-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-between;
+		text-align: center;
+		background: white;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		padding: 12px 8px;
+		text-decoration: none;
+		color: inherit;
+		transition: box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
+	}
+
+		.notify-card:hover
+		 {
+			background: #f3f3f3;
+			transform: translateY(-2px);
+			box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+		}
+
+	.icon-wrapper {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 0.5rem;
+	}
+
+		.icon-wrapper fluent-icon {
+			font-size: 2rem; /* Làm icon to lên */
+		}
+
+	.icon-separator {
+		width: 50%;
+		height: 2px;
+		background: #ddd;
+		margin: 0.5rem 0;
+		border-radius: 1px;
+	}
+
+	.notify-label {
+		font-size: 0.9rem;
+		font-weight: 500;
+		color: #333;
+	}
+
+	.icon-wrapper svg{
+		width:130px !important;
+	}
+
+	.container-custom {
+		max-width: 1200px;
+		margin: 0 auto; /* canh giữa */
+		padding: 0 16px; 
+	}
+</style>
+@code{
+    [CascadingParameter]
+    public CurrentUserDto CurrentUser { get; set; } = new();
+}

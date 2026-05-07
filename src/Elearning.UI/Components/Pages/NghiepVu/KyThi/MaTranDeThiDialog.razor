@@ -1,0 +1,169 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Forms.KyThi
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+@implements IDialogContentComponent<Guid>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.TableLightning())" />
+        <FluentLabel Typo="Typography.PaneHeader">Thiết lập Ma trận (Random)</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <div style="margin-bottom: 15px;">
+        <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="ThemLuatMoi">
+            Thêm quy tắc mới
+        </FluentButton>
+        <span style="color: gray; font-size: 0.9em; margin-left: 10px;">
+            Hệ thống sẽ tự động bốc câu hỏi và ghi đè lên cấu hình hiện tại của đề thi.
+        </span>
+    </div>
+
+    <div style="min-height: 350px; max-height: 450px; overflow-y: auto; overflow-x: hidden; padding-bottom: 150px;">
+        @if (!ModelForm.DanhSachLuat.Any())
+        {
+            <div style="text-align:center; color:gray; padding: 20px; border: 1px dashed #ccc; border-radius: 8px;">
+                Chưa có quy tắc nào. Hãy bấm "Thêm quy tắc mới".
+            </div>
+        }
+
+        @foreach (var luat in ModelForm.DanhSachLuat)
+        {
+            <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
+
+                <FluentSelect Label="Phần thi" TOption="string" Value="@luat.PhanThi.ToString()" ValueChanged="@(v => luat.PhanThi = Enum.Parse<EnumLoaiPhanThi>(v))" Style="width: 140px;">
+                    @foreach (var p in Enum.GetValues<EnumLoaiPhanThi>())
+                    {
+                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                    }
+                </FluentSelect>
+
+                <FluentSelect Label="Loại câu hỏi" TOption="string" Value="@luat.LoaiCauHoiGoc.ToString()" ValueChanged="@(v => luat.LoaiCauHoiGoc = Enum.Parse<EnumLoaiCauHoi>(v))" Style="width: 150px;">
+                    @foreach (var p in Enum.GetValues<EnumLoaiCauHoi>())
+                    {
+                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                    }
+                </FluentSelect>
+
+                <FluentCombobox Label="Chủ đề"
+                                Items="@AvailableChuDes"
+                                @bind-Value="luat.ChuDe"
+                                Autocomplete="ComboboxAutocomplete.Both"
+                                Placeholder="Chọn hoặc gõ tìm..."
+                                Style="width: 150px;" />
+
+                <FluentSelect Label="Mức độ" TOption="string" Value="@luat.MucDo.ToString()" ValueChanged="@(v => luat.MucDo = Enum.Parse<EnumMucDo>(v))" Style="width: 120px;">
+                    @foreach (var p in Enum.GetValues<EnumMucDo>())
+                    {
+                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                    }
+                </FluentSelect>
+
+                <FluentNumberField Label="Số lượng" @bind-Value="luat.SoLuongCanLay" Min="1" Style="width: 80px;" />
+
+                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" Style="color:red; margin-bottom: 4px;" OnClick="@(() => ModelForm.DanhSachLuat.Remove(luat))" />
+            </div>
+        }
+    </div>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()" Disabled="IsProcessing">Hủy</FluentButton>
+    <FluentButton Appearance="Appearance.Accent" OnClick="ThucThiRandom" Loading="IsProcessing" IconStart="@(new Icons.Regular.Size16.Play())">
+        Bắt đầu Random
+    </FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+
+    // Nhận KyThiId từ ngoài truyền vào
+    [Parameter] public Guid Content { get; set; }
+
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsProcessing = false;
+    private MaTranDeThiForm ModelForm = new() { KhoaHocId = Guid.Empty, DanhSachLuat = new() };
+
+    // BIẾN LƯU DANH SÁCH CHỦ ĐỀ CỦA MÔN HỌC
+    private List<string> AvailableChuDes = new();
+
+    // GỌI API LẤY DANH SÁCH CHỦ ĐỀ KHI MỞ DIALOG
+    protected override async Task OnInitializedAsync()
+    {
+        var req = new ApiRequestModel
+        {
+            ApiService = ServicesRegistryEnum.ServicePortal,
+            Endpoint = $"/CauHoi/chu-de?kyThiId={Content}", // Truyền KyThiId vào để backend lọc đúng môn
+            HasAuthorization = true
+        };
+
+        var res = await CallService.Get<List<string>>(req);
+
+        if (res.Status == StatusCode.OK && res.Data != null)
+        {
+            AvailableChuDes = res.Data;
+        }
+    }
+
+    private void ThemLuatMoi()
+    {
+        ModelForm.DanhSachLuat.Add(new LuatRandomForm
+        {
+            PhanThi = EnumLoaiPhanThi.TracNghiem,
+            LoaiCauHoiGoc = EnumLoaiCauHoi.MotLuaChon,
+            MucDo = EnumMucDo.De,
+            SoLuongCanLay = 1,
+            // Mặc định chọn luôn chủ đề đầu tiên cho tiện, nếu danh sách rỗng thì để chuỗi rỗng
+            ChuDe = AvailableChuDes.FirstOrDefault() ?? string.Empty
+        });
+    }
+
+    private async Task ThucThiRandom()
+    {
+        if (!ModelForm.DanhSachLuat.Any())
+        {
+            ToastService.ShowWarning("Vui lòng thiết lập ít nhất 1 quy tắc.");
+            return;
+        }
+
+        if (ModelForm.DanhSachLuat.Any(x => string.IsNullOrWhiteSpace(x.ChuDe)))
+        {
+            ToastService.ShowWarning("Chủ đề không được để trống.");
+            return;
+        }
+
+        IsProcessing = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/KyThi/{Content}/cau-hinh/random",
+                HasAuthorization = true
+            };
+
+            var result = await CallService.Post<string>(req, ModelForm);
+
+            if (result.Status == StatusCode.OK)
+            {
+                ToastService.ShowSuccess("Đã khởi tạo đề thi tự động thành công!");
+                await Dialog.CloseAsync(true);
+            }
+            else
+            {
+                ToastService.ShowError(result.Message ?? "Có lỗi xảy ra, có thể ngân hàng không đủ câu hỏi.");
+            }
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+}

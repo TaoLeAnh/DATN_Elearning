@@ -1,0 +1,220 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="3" Style="padding:4px;">
+
+                <FluentGridItem md="7">
+                    <FluentTextField @bind-Value="ModelForm.TenMaTran" Label="Tên Ma trận (*)" Style="width: 100%;" Required />
+                    <ValidationMessage For="@(() => ModelForm.TenMaTran)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="3">
+                    <FluentSelect Label="Môn học (*)" TOption="string" Value="@ModelForm.MonHoc.ToString()" ValueChanged="@(v => ModelForm.MonHoc = Enum.Parse<MonHocEnum>(v))" Style="width: 100%;">
+                        @foreach (var item in Enum.GetValues<MonHocEnum>())
+                        {
+                            <FluentOption Value="@item.ToString()">@item.GetDescription()</FluentOption>
+                        }
+                    </FluentSelect>
+                </FluentGridItem>
+
+                <FluentGridItem md="2">
+                    <div style="margin-top: 30px;">
+                        <FluentSwitch @bind-Value="ModelForm.IsActive" Label="Kích hoạt Mặc định" />
+                    </div>
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <h4 style="border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-top: 15px;">Cấu hình Quy tắc bốc câu hỏi</h4>
+                    <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddRule" Style="margin-bottom: 15px;">
+                        Thêm quy tắc mới
+                    </FluentButton>
+
+                    <div style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
+                        @if (!ModelForm.ChiTiets.Any())
+                        {
+                            <div style="text-align:center; color:gray; padding: 20px; border: 1px dashed #ccc; border-radius: 8px;">
+                                Chưa có quy tắc nào. Hệ thống sẽ không thể trộn đề.
+                            </div>
+                        }
+
+                        @foreach (var luat in ModelForm.ChiTiets)
+                        {
+                            <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
+
+                                <FluentSelect Label="Phần thi" TOption="string" Value="@luat.PhanThi.ToString()" ValueChanged="@(v => luat.PhanThi = Enum.Parse<EnumLoaiPhanThi>(v))" Style="width: 160px;">
+                                    @foreach (var p in Enum.GetValues<EnumLoaiPhanThi>())
+                                    {
+                                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                                    }
+                                </FluentSelect>
+
+                                <FluentSelect Label="Loại câu hỏi" TOption="string" Value="@luat.LoaiCauHoi.ToString()" ValueChanged="@(v => luat.LoaiCauHoi = Enum.Parse<EnumLoaiCauHoi>(v))" Style="width: 170px;">
+                                    @foreach (var p in Enum.GetValues<EnumLoaiCauHoi>())
+                                    {
+                                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                                    }
+                                </FluentSelect>
+
+                                <FluentSelect Label="Mức độ" TOption="string" Value="@luat.MucDo.ToString()" ValueChanged="@(v => luat.MucDo = Enum.Parse<EnumMucDo>(v))" Style="width: 140px;">
+                                    @foreach (var p in Enum.GetValues<EnumMucDo>())
+                                    {
+                                        <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                                    }
+                                </FluentSelect>
+
+                                <FluentTextField @bind-Value="luat.ChuDe" Label="Tên Chủ đề (Tùy chọn)" Placeholder="VD: Hàm số" Style="width: 200px;" />
+
+                                <FluentNumberField @bind-Value="luat.SoLuong" Label="Số lượng" Min="1" Style="width: 90px;" />
+
+                                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" Style="color:red; margin-bottom: 4px;" OnClick="@(() => ModelForm.ChiTiets.Remove(luat))" />
+                            </div>
+                        }
+                    </div>
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu cấu hình</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private MaTranDeThiMacDinhForm ModelForm = new() { ChiTiets = new List<ChiTietMaTranMacDinhForm>() };
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/MaTranDeThiMacDinh/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<MaTranDeThiMacDinhDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm = new MaTranDeThiMacDinhForm
+                    {
+                        TenMaTran = res.Data.TenMaTran,
+                        MonHoc = res.Data.MonHoc,
+                        IsActive = res.Data.IsActive,
+                        ChiTiets = res.Data.ChiTiets.Select(c => new ChiTietMaTranMacDinhForm
+                        {
+                            PhanThi = c.PhanThi,
+                            LoaiCauHoi = c.LoaiCauHoi,
+                            MucDo = c.MucDo,
+                            ChuDe = c.ChuDe,
+                            SoLuong = c.SoLuong
+                        }).ToList()
+                    };
+                }
+            }
+            else
+            {
+                ModelForm.MonHoc = Enum.GetValues<MonHocEnum>().FirstOrDefault();
+                // Mặc định thêm sẵn 1 dòng cho người dùng
+                AddRule();
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AddRule()
+    {
+        ModelForm.ChiTiets.Add(new ChiTietMaTranMacDinhForm
+        {
+            PhanThi = EnumLoaiPhanThi.TracNghiem,
+            LoaiCauHoi = EnumLoaiCauHoi.MotLuaChon,
+            MucDo = EnumMucDo.De,
+            SoLuong = 1,
+            ChuDe = string.Empty
+        });
+    }
+
+    private async Task Save()
+    {
+        if (!ModelForm.ChiTiets.Any())
+        {
+            ToastService.ShowWarning("Vui lòng thêm ít nhất 1 quy tắc.");
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/MaTranDeThiMacDinh/{Content.Id}" : "/MaTranDeThiMacDinh",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

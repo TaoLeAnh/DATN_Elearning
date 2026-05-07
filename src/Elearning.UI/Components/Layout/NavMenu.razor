@@ -1,0 +1,36 @@
+﻿@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<div class="navmenu-container" style="height: 100%; overflow-y: auto; overflow-x: hidden; background-color: #ffffff; border-right: 1px solid #e0e0e0;">
+
+    <FluentNavMenu Style="width: 100%;">
+        <FluentNavLink Href="/nghiep-vu/ban-lam-viec" Icon="@(new Icons.Regular.Size20.Home())">
+            Bàn làm việc
+        </FluentNavLink>
+
+        <FluentNavGroup Title="Bài học" Icon="@(new Icons.Regular.Size20.HatGraduation())" Expanded="true">
+            <FluentNavLink Href="/nghiep-vu/quan-ly-khoa-hoc" Icon="@(new Icons.Regular.Size20.Book())">Quản lý Khóa học</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-chuong-hoc" Icon="@(new Icons.Regular.Size20.Bookmark())">Quản lý Chương học</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-bai-hoc" Icon="@(new Icons.Regular.Size20.DocumentText())">Quản lý Bài học</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-dang-ky" Icon="@(new Icons.Regular.Size20.ClipboardTask())">Quản lý Đăng ký</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-tien-do" Icon="@(new Icons.Regular.Size20.DataBarHorizontal())">Quản lý Tiến độ</FluentNavLink>
+        </FluentNavGroup>
+
+        <FluentNavGroup Title="Ôn tập" Icon="@(new Icons.Regular.Size20.CheckmarkSquare())" Expanded="true">
+            <FluentNavLink Href="/nghiep-vu/quan-ly-cau-hoi" Icon="@(new Icons.Regular.Size20.QuestionCircle())">Ngân hàng Câu hỏi</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-bo-cau-hoi" Icon="@(new Icons.Regular.Size20.Folder())">Bộ câu hỏi ôn tập</FluentNavLink>
+        </FluentNavGroup>
+
+        <FluentNavGroup Title="Kiểm tra" Icon="@(new Icons.Regular.Size20.Timer())" Expanded="true">
+            <FluentNavLink Href="/nghiep-vu/quan-ly-ky-thi" Icon="@(new Icons.Regular.Size20.DocumentEdit())">Quản lý Kỳ thi</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-ma-tran" Icon="@(new Icons.Regular.Size20.TableLightning())">Cấu hình Ma trận</FluentNavLink>
+        </FluentNavGroup>
+
+        <FluentNavGroup Title="Hệ thống" Icon="@(new Icons.Regular.Size20.Settings())" Expanded="true">
+            <FluentNavLink Href="/nghiep-vu/quan-ly-nguoi-dung" Icon="@(new Icons.Regular.Size20.People())">Quản lý Người dùng</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/ho-so-giao-vien" Icon="@(new Icons.Regular.Size20.ContactCard())">Hồ sơ Giáo viên</FluentNavLink>
+            <FluentNavLink Href="/nghiep-vu/quan-ly-log-vi-pham" Icon="@(new Icons.Regular.Size20.Warning())">Log vi phạm quy chế</FluentNavLink>
+        </FluentNavGroup>
+
+    </FluentNavMenu>
+</div>

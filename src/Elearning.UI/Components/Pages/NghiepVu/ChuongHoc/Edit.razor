@@ -1,0 +1,188 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="12">
+                    <FluentTextField @bind-Value="ModelForm.TenChuong" Label="Tên chương học (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.TenChuong)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="KhoaHocOption"
+                                        Label="Thuộc khóa học (*)"
+                                        OnOptionsSearch="OnSearchKhoaHoc"
+                                        OptionText="@(item => item.TenKhoaHoc)"
+                                        @bind-SelectedOptions="SelectedKhoaHocs"
+                                        MaximumSelectedOptions="1"
+                                        Placeholder="Gõ để tìm tên khóa học..."
+                                        Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.KhoaHocId)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="4">
+                    <FluentNumberField @bind-Value="ModelForm.ThuTu" Label="Thứ tự hiển thị (*)" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.ThuTu)" Style="color:red;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private ChuongHocForm ModelForm = new();
+
+    public class KhoaHocOption
+    {
+        public Guid Id { get; set; }
+        public string TenKhoaHoc { get; set; } = string.Empty;
+    }
+
+    private IEnumerable<KhoaHocOption> _selectedKhoaHocs = new List<KhoaHocOption>();
+    private IEnumerable<KhoaHocOption> SelectedKhoaHocs
+    {
+        get => _selectedKhoaHocs;
+        set
+        {
+            _selectedKhoaHocs = value;
+            ModelForm.KhoaHocId = _selectedKhoaHocs.FirstOrDefault()?.Id ?? Guid.Empty;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/ChuongHoc/{Content.Id}" };
+                var res = await CallService.Get<ChuongHocForm>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm = res.Data;
+
+                    if (ModelForm.KhoaHocId != Guid.Empty)
+                    {
+                        var reqKH = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KhoaHoc/{ModelForm.KhoaHocId}" };
+                        var resKH = await CallService.Get<KhoaHocDto>(reqKH);
+                        if (resKH.Data != null)
+                        {
+                            _selectedKhoaHocs = new List<KhoaHocOption> {
+                                new KhoaHocOption { Id = resKH.Data.Id, TenKhoaHoc = resKH.Data.TenKhoaHoc }
+                            };
+                        }
+                    }
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+    private async Task OnSearchKhoaHoc(OptionsSearchEventArgs<KhoaHocOption> e)
+    {
+        var query = new
+        {
+            SearchText = e.Text,
+            PageIndex = 1,
+            PageSize = 20
+        };
+
+        var req = new ApiRequestModel
+        {
+            ApiService = ServicesRegistryEnum.ServicePortal,
+            Endpoint = "/KhoaHoc/getpaged", 
+            HasAuthorization = true
+        };
+
+        var res = await CallService.Post<DataTableJson<KhoaHocDto>>(req, query);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new KhoaHocOption
+            {
+                Id = x.Id,
+                TenKhoaHoc = x.TenKhoaHoc
+            }).ToList();
+        }
+    }
+    private async Task Save()
+    {
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/ChuongHoc/{Content.Id}" : "/ChuongHoc",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

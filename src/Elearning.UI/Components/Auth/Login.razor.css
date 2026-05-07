@@ -1,0 +1,154 @@
+﻿.ms-login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-image: url('img/login-bg.svg');
+    background-repeat: no-repeat, no-repeat;
+    background-position: center center, center center;
+    background-size: cover, cover;
+}
+
+.ms-login-card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.ms-login-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 32px 36px 28px 36px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-radius: 0;
+    background-color: #ffffff;
+}
+
+.ms-login-header {
+    margin-bottom: 24px;
+}
+
+.ms-login-logo {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0078d4;
+    margin-bottom: 16px;
+}
+
+    .ms-login-logo span {
+        color: #2b2b2b;
+    }
+
+.ms-login-title {
+    font-size: 24px;
+    font-weight: 500;
+    margin: 0;
+    color: #1b1b1b;
+}
+
+.ms-login-validation {
+    color: #a80000;
+    font-size: 12px;
+}
+
+.ms-login-primary-btn {
+    font-weight: 500;
+    border-radius: 0;
+}
+
+.ms-login-secondary-text {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #333;
+}
+
+    .ms-login-secondary-text a {
+        margin-left: 4px;
+        color: #106ebe;
+        text-decoration: none;
+    }
+
+        .ms-login-secondary-text a:hover,
+        .ms-login-link-small:hover {
+            text-decoration: underline;
+        }
+
+.ms-login-link-small {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #106ebe;
+    text-decoration: none;
+}
+
+.ms-login-alt-btn {
+    margin-top: 4px;
+    width: 100%;
+    max-width: 380px;
+    height: 40px;
+    border: 1px solid #8a8886;
+    background-color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    padding: 0 12px;
+}
+
+    .ms-login-alt-btn:hover {
+        background-color: #f3f2f1;
+    }
+
+
+
+.btn-link {
+    display: block;
+    width: 100%;
+    text-decoration: none;
+}
+
+.btn-content {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Divider OR + line ngang */
+.login-divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 14px 0 4px;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .9;
+}
+
+    .login-divider::before,
+    .login-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(0,0,0,.12); /* nền sáng */
+    }
+
+
+@media (prefers-color-scheme: dark) {
+    .login-divider::before,
+    .login-divider::after {
+        background: rgba(255,255,255,.18);
+    }
+}
+
+.login-hint {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: left;
+    opacity: .85;
+}

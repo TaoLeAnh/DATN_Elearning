@@ -1,0 +1,445 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - E-Learning</title>
+    <script type="importmap"></script>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Elearning.Publising.UI.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hover-primary {
+            transition: color 0.3s ease;
+        }
+
+            .hover-primary:hover {
+                color: #1a365d !important;
+            }
+
+        .search-bar-custom {
+            background-color: #f3f4f6;
+            border: none;
+            padding-right: 35px;
+        }
+
+            .search-bar-custom:focus {
+                background-color: #fff;
+                box-shadow: 0 0 0 0.25rem rgba(26, 54, 93, 0.25);
+                border: 1px solid #1a365d;
+            }
+
+        /* --- STYLE CHO MENU ACTIVE --- */
+        .active-menu {
+            color: #1a365d !important;
+            font-weight: 800 !important;
+            position: relative;
+        }
+
+            /* Hiệu ứng gạch chân tinh tế cho mục đang chọn */
+            .active-menu::after {
+                content: "";
+                position: absolute;
+                bottom: -2px;
+                left: 15%;
+                width: 70%;
+                height: 3px;
+                background-color: #f6ad55; /* Màu vàng cam giống icon mũ */
+                border-radius: 999px;
+            }
+
+        .hover-white:hover {
+            color: #ffffff !important;
+            transform: translateX(5px);
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3 mb-0">
+            <div class="container">
+                <a class="navbar-brand fw-bold fs-4 d-flex align-items-center" style="color: #1a365d;" asp-area="" asp-page="/Index">
+                    <i class="fa-solid fa-graduation-cap text-warning me-2 fa-bounce" style="--fa-animation-duration: 3s;"></i> E-Learning
+                </a>
+
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    @{
+                        // Lấy tên trang hiện tại để xử lý Active Tab
+                        var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
+                    }
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 fw-semibold gap-lg-4 fs-6">
+                        <li class="nav-item">
+                            <a class="nav-link px-3 hover-primary @(currentPage == "/Index" ? "active-menu" : "text-dark")" asp-area="" asp-page="/Index">Trang chủ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link px-3 hover-primary @(currentPage == "/DanhSachKhoaHoc" || currentPage == "/CourseDetail" ? "active-menu" : "text-dark")" asp-page="/DanhSachKhoaHoc">Khóa học</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link px-3 hover-primary @(currentPage == "/Exam" ? "active-menu" : "text-dark")" asp-page="/Exam">Kỳ thi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link px-3 hover-primary @(currentPage == "/TinTuc" ? "active-menu" : "text-dark")" href="#">Tin tức</a>
+                        </li>
+                    </ul>
+
+                    <div class="d-flex align-items-center mt-3 mt-lg-0">
+                        <form class="d-flex me-3 position-relative">
+                            <input class="form-control rounded-pill search-bar-custom" type="search" placeholder="Tìm kiếm...">
+                            <button class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted p-0 me-3" type="submit" style="text-decoration: none;">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                        </form>
+
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <div class="dropdown">
+                                <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <img src="https://ui-avatars.com/api/?name=@User.Identity.Name&background=1a365d&color=fff" alt="Avatar" width="40" height="40" class="rounded-circle me-2 shadow-sm">
+                                    <span class="fw-bold" style="color: #1a365d;">@User.Identity.Name</span>
+                                </a>
+
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" aria-labelledby="userDropdown" style="border-radius: 12px; min-width: 220px;">
+                                    <li><a class="dropdown-item py-2 fw-semibold" href="#"><i class="fa-solid fa-user-circle me-2 text-primary"></i>Hồ sơ cá nhân</a></li>
+                                    <li>
+                                        <a class="dropdown-item py-2 fw-semibold" href="/khoa-hoc-cua-toi">
+                                            <i class="fa-solid fa-book-open me-2 text-success"></i>Khóa học của tôi
+                                        </a>
+                                    </li>
+                                    @* <li><a class="dropdown-item py-2 fw-semibold" href="#"><i class="fa-solid fa-chart-line me-2 text-warning"></i>Tiến độ học tập</a></li> *@
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" asp-page="/Logout">
+                                            <button type="submit" class="dropdown-item py-2 fw-bold text-danger">
+                                                <i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Đăng xuất
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn text-white fw-bold px-4 py-2 rounded-pill shadow-sm" style="background-color: #1a365d; border-color: #1a365d; white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#authModal">
+                                <i class="fa-solid fa-user me-2"></i> Đăng nhập
+                            </button>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="flex-grow-1">
+        @RenderBody()
+    </main>
+
+    <footer class="text-white pt-5 pb-3 mt-auto" style="background-color: #1a365d;">
+        <div class="container">
+            <div class="row mb-4 g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h4 class="text-uppercase fw-bold mb-3 d-flex align-items-center">
+                        <i class="fa-solid fa-graduation-cap text-warning me-2"></i> E-Learning
+                    </h4>
+                    <p class="text-white-50" style="line-height: 1.8;">
+                        Hệ thống học tập trực tuyến thông minh, cung cấp các khóa học chất lượng cao và bộ đề thi sát với thực tế, giúp bạn dễ dàng chinh phục mục tiêu học tập.
+                    </p>
+                    <div class="d-flex gap-3 mt-4">
+                        <a href="#" class="text-white-50 text-decoration-none fs-5 transition"><i class="fa-brands fa-facebook hover-white"></i></a>
+                        <a href="#" class="text-white-50 text-decoration-none fs-5 transition"><i class="fa-brands fa-youtube hover-white"></i></a>
+                        <a href="#" class="text-white-50 text-decoration-none fs-5 transition"><i class="fa-brands fa-tiktok hover-white"></i></a>
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <h5 class="text-uppercase fw-bold mb-3 text-warning">Khám phá</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><a href="/DanhSachKhoaHoc" class="text-white-50 text-decoration-none hover-white">Khóa học</a></li>
+                        <li class="mb-2"><a href="/Exam" class="text-white-50 text-decoration-none hover-white">Kỳ thi đánh giá</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Tin tức & Sự kiện</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Cộng đồng</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <h5 class="text-uppercase fw-bold mb-3 text-warning">Hỗ trợ</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Hướng dẫn học tập</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Câu hỏi thường gặp</a></li>
+                        <li class="mb-2"><a href="/Privacy" class="text-white-50 text-decoration-none hover-white">Chính sách bảo mật</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Điều khoản sử dụng</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="text-uppercase fw-bold mb-3 text-warning">Liên hệ</h5>
+                    <ul class="list-unstyled mb-0 text-white-50">
+                        <li class="mb-3 d-flex align-items-start">
+                            <i class="fa-solid fa-location-dot mt-1 me-3 text-warning"></i>
+                            <span>123 Đường Học Tập, Quận Tri Thức, TP. Hà Nội</span>
+                        </li>
+                        <li class="mb-3 d-flex align-items-center">
+                            <i class="fa-solid fa-envelope me-3 text-warning"></i>
+                            <span>hotro@elearning.vn</span>
+                        </li>
+                        <li class="mb-3 d-flex align-items-center">
+                            <i class="fa-solid fa-phone me-3 text-warning"></i>
+                            <span>0123 456 789 (Hỗ trợ 24/7)</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <hr class="border-secondary opacity-25 mb-4">
+
+            <div class="row align-items-center">
+                <div class="col-md-8 text-center text-md-start">
+                    <p class="mb-0 text-white-50 small">
+                        &copy; 2026 <strong>E-Learning System</strong>. Thiết kế và phát triển bởi Lê Anh Tạo.
+                    </p>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <i class="fa-brands fa-cc-visa text-white-50 fs-3 me-2"></i>
+                    <i class="fa-brands fa-cc-mastercard text-white-50 fs-3 me-2"></i>
+                    <i class="fa-brands fa-cc-paypal text-white-50 fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-5 pb-5 pt-2">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold" style="color: #1a365d;">Đăng nhập / Tạo tài khoản</h3>
+                        <p class="text-muted" id="authSubTitle">Nhập email để tiếp tục</p>
+                    </div>
+
+                    <button type="button" id="btnBackEmail" class="btn btn-link text-decoration-none p-0 mb-3" style="display: none;">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Đổi Email khác
+                    </button>
+
+                    <div id="authErrorAlert" class="alert alert-danger" style="display: none;"></div>
+                    <div id="authSuccessAlert" class="alert alert-success text-center fw-bold py-4" style="display: none;"></div>
+
+                    <form id="modalAuthForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="authActionType" value="CHECK" />
+
+                        <div class="mb-4" id="authEmailGroup">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" id="authEmail" class="form-control form-control-lg" placeholder="example@example.com" required>
+                        </div>
+
+                        <div id="authPasswordGroup" style="display: none;">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Mật khẩu</label>
+                                <input type="password" id="authPassword" class="form-control form-control-lg" placeholder="Nhập mật khẩu">
+                            </div>
+                        </div>
+
+                        <div id="authConfirmGroup" style="display: none;">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Xác nhận mật khẩu</label>
+                                <input type="password" id="authConfirmPassword" class="form-control form-control-lg" placeholder="Nhập lại mật khẩu">
+                                <div id="authPasswordError" class="text-danger small mt-1" style="display: none;">Mật khẩu không khớp!</div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" id="btnAuthSubmit" class="btn btn-lg text-white fw-bold" style="background-color: #1a365d; border-radius: 8px;">
+                                Tiếp tục
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const authForm = document.getElementById('modalAuthForm');
+            const actionType = document.getElementById('authActionType');
+            const emailGroup = document.getElementById('authEmailGroup');
+            const txtEmail = document.getElementById('authEmail');
+            const passwordGroup = document.getElementById('authPasswordGroup');
+            const txtPassword = document.getElementById('authPassword');
+            const confirmGroup = document.getElementById('authConfirmGroup');
+            const txtConfirmPassword = document.getElementById('authConfirmPassword');
+            const btnSubmit = document.getElementById('btnAuthSubmit');
+            const btnBack = document.getElementById('btnBackEmail');
+            const subTitle = document.getElementById('authSubTitle');
+            const passwordError = document.getElementById('authPasswordError');
+            const errorBox = document.getElementById('authErrorAlert');
+            const successBox = document.getElementById('authSuccessAlert');
+
+            let currentMode = 'CHECK';
+
+            btnBack.addEventListener('click', function() {
+                currentMode = 'CHECK';
+                actionType.value = 'CHECK';
+                txtEmail.readOnly = false;
+                emailGroup.style.display = 'block';
+                passwordGroup.style.display = 'none';
+                confirmGroup.style.display = 'none';
+                btnBack.style.display = 'none';
+                errorBox.style.display = 'none';
+                successBox.style.display = 'none';
+                txtPassword.removeAttribute('required');
+                txtConfirmPassword.removeAttribute('required');
+                txtPassword.value = '';
+                txtConfirmPassword.value = '';
+                btnSubmit.innerText = 'Tiếp tục';
+                subTitle.innerText = 'Nhập email để tiếp tục';
+            });
+
+            const authModalElement = document.getElementById('authModal');
+            if (authModalElement) {
+                authModalElement.addEventListener('hidden.bs.modal', function () {
+                    btnBack.click();
+                    authForm.style.display = 'block';
+                });
+            }
+
+            if (authForm) {
+                authForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    errorBox.style.display = 'none';
+
+                    const emailVal = txtEmail.value.trim();
+                    const tokenInput = document.querySelector('#modalAuthForm input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
+
+                    if (currentMode === 'CHECK') {
+                        if (!emailVal) return;
+                        btnSubmit.disabled = true;
+                        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
+
+                        try {
+                            const response = await fetch('/Login?handler=CheckEmail', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                                body: JSON.stringify({ Email: emailVal })
+                            });
+
+                            if (!response.ok) throw new Error("Lỗi Server");
+                            const result = await response.json();
+
+                            if (result.success) {
+                                txtEmail.readOnly = true;
+                                btnBack.style.display = 'inline-block';
+
+                                if (result.exists) {
+                                    currentMode = 'LOGIN';
+                                    actionType.value = 'LOGIN';
+                                    passwordGroup.style.display = 'block';
+                                    txtPassword.setAttribute('required', 'true');
+                                    subTitle.innerText = 'Chào mừng trở lại! Vui lòng nhập mật khẩu.';
+                                    btnSubmit.innerText = 'Đăng nhập';
+                                } else {
+                                    currentMode = 'REGISTER';
+                                    actionType.value = 'REGISTER';
+                                    passwordGroup.style.display = 'block';
+                                    confirmGroup.style.display = 'block';
+                                    txtPassword.setAttribute('required', 'true');
+                                    txtConfirmPassword.setAttribute('required', 'true');
+                                    subTitle.innerText = 'Tạo tài khoản mới cực nhanh.';
+                                    btnSubmit.innerText = 'Đăng ký tài khoản';
+                                }
+                            } else {
+                                errorBox.innerText = result.message;
+                                errorBox.style.display = 'block';
+                            }
+                        } catch (error) {
+                            errorBox.innerText = "Lỗi kết nối mạng!";
+                            errorBox.style.display = 'block';
+                        } finally {
+                            btnSubmit.disabled = false;
+                            if(currentMode === 'CHECK') btnSubmit.innerText = 'Tiếp tục';
+                        }
+                    }
+                    else {
+                        if (currentMode === 'REGISTER' && txtPassword.value !== txtConfirmPassword.value) {
+                            passwordError.style.display = 'block';
+                            return;
+                        }
+                        passwordError.style.display = 'none';
+
+                        btnSubmit.disabled = true;
+                        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+                        const payload = {
+                            Email: emailVal,
+                            Password: txtPassword.value,
+                            ActionType: actionType.value
+                        };
+
+                        try {
+                            const response = await fetch('/Login?handler=SubmitAuth', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) throw new Error("Lỗi Server");
+                            const result = await response.json();
+
+                            if (result.success) {
+                                authForm.style.display = 'none';
+                                btnBack.style.display = 'none';
+                                subTitle.style.display = 'none';
+
+                                successBox.innerHTML = `<i class="fa-solid fa-circle-check fs-2 mb-2 d-block"></i> ${result.message}`;
+                                successBox.style.display = 'block';
+
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+
+                            } else {
+                                errorBox.innerText = result.message;
+                                errorBox.style.display = 'block';
+                                btnSubmit.disabled = false;
+                                btnSubmit.innerText = currentMode === 'LOGIN' ? 'Đăng nhập' : 'Đăng ký tài khoản';
+                            }
+                        } catch (error) {
+                            errorBox.innerText = "Lỗi kết nối mạng!";
+                            errorBox.style.display = 'block';
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerText = currentMode === 'LOGIN' ? 'Đăng nhập' : 'Đăng ký tài khoản';
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

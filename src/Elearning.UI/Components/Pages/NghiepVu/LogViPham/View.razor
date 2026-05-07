@@ -1,0 +1,99 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Warning())" Color="Color.Error" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết Biên bản Vi phạm</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="12">
+                <div style="background-color: #fdf3f4; border-left: 4px solid #d13438; padding: 15px; border-radius: 4px;">
+                    <h3 style="margin-top: 0; color: #d13438;">@Item.TenLoaiViPham</h3>
+                    <p style="margin-bottom: 0; font-style: italic; color: #333;">"@Item.ChiTiet"</p>
+                </div>
+            </FluentGridItem>
+
+            <FluentGridItem md="12">
+                <FluentDivider Style="margin: 10px 0;" />
+            </FluentGridItem>
+
+            <FluentGridItem md="6">
+                <b>Thời điểm vi phạm:</b>
+                <div style="color: #0078d4; font-weight: 500; font-size: 1.1em;">
+                    @Item.ThoiDiemViPham.ToString("HH:mm:ss - dd/MM/yyyy")
+                </div>
+            </FluentGridItem>
+
+            <FluentGridItem md="6">
+                <b>Thuộc Đề thi/Khóa học:</b>
+                <div style="font-weight: 500;">@Item.TenDeThi</div>
+            </FluentGridItem>
+
+            <FluentGridItem md="12">
+                <div style="border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <FluentLabel Weight="FontWeight.Bold" Style="margin-bottom: 8px; display:block;">Thông tin Học viên</FluentLabel>
+                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="15">
+                        <FluentIcon Value="@(new Icons.Regular.Size48.Person())" Color="Color.Neutral" />
+                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                            <span style="font-size: 1.1em; font-weight: 600;">@Item.TenNguoiDung</span>
+                            @* <span style="color: gray;">Mã SV: @(string.IsNullOrEmpty(Item.MaNguoiDung) ? "N/A" : Item.MaNguoiDung)</span> *@
+                        </FluentStack>
+                    </FluentStack>
+                </div>
+            </FluentGridItem>
+        </FluentGrid>
+    }
+    else
+    {
+        <div style="height: 200px; display: flex; justify-content: center; align-items: center;">
+            <FluentProgressRing />
+        </div>
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+
+    private LogViPhamDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/LogViPham/{Content.Id}",
+                HasAuthorization = true
+            };
+
+            var res = await CallService.Get<LogViPhamDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                Item = res.Data;
+            }
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

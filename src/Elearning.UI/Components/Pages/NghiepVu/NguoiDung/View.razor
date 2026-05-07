@@ -1,0 +1,80 @@
+﻿@using Elearning.Shared.Commons.Enums
+@using Elearning.Shared.Commons.Extensions
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+@if (!IsLoading)
+{
+    <FluentDialogBody>
+        <FluentGrid Spacing="2" Style="padding: 4px;">
+            <FluentGridItem md="6">
+                <label style="font-weight:bold; color:gray">Họ và tên:</label>
+                <div>@Item.Ten</div>
+            </FluentGridItem>
+            <FluentGridItem md="6">
+                <label style="font-weight:bold; color:gray">Email:</label>
+                <div>@Item.Email</div>
+            </FluentGridItem>
+            <FluentGridItem md="6">
+                <label style="font-weight:bold; color:gray">Vai trò:</label>
+                <div>@Item.VaiTro.GetDescription()</div>
+            </FluentGridItem>
+            <FluentGridItem md="6">
+                <label style="font-weight:bold; color:gray">Ngày tạo:</label>
+                <div>@Item.Created.ToString("HH:mm:ss dd/MM/yyyy")</div>
+            </FluentGridItem>
+        </FluentGrid>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+
+    private NguoiDungDto Item = new();
+    private bool IsLoading = true;
+
+    private string GetRoleName(EnumVaiTro vaiTro)
+    {
+        return vaiTro switch
+        {
+            EnumVaiTro.Admin => "Quản trị viên",
+            EnumVaiTro.GiangVien => "Giảng viên",
+            EnumVaiTro.HocSinh => "Học sinh",
+            _ => "Không xác định"
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/NguoiDung/{Content.Id}", HasAuthorization = true };
+            var res = await CallService.Get<NguoiDungDto>(req);
+            if (res.Status == StatusCode.OK && res.Data != null) Item = res.Data;
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

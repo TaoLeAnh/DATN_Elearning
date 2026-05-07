@@ -1,0 +1,63 @@
+﻿@using Elearning.Shared.Commons.Extensions
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+@implements IDialogContentComponent<Guid>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.WindowApps())" />
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+
+<FluentDialogBody>
+    <FluentGrid Class="s-form-view" Spacing="2" AdaptiveRendering="true" Justify="JustifyContent.FlexStart" Style="padding: 4px;">
+
+        @* Hiển thị Tên *@
+        <FluentGridItem md="12">
+            <div class="row-info">
+                <label>Tên người dùng:</label>
+                <div>@Item.Ten</div>
+            </div>
+        </FluentGridItem>
+
+        @* Hiển thị Email *@
+        <FluentGridItem md="12">
+            <div class="row-info">
+                <label>Email:</label>
+                <div class="wrap-text">@Item.Email</div>
+            </div>
+        </FluentGridItem>
+
+        @* Hiển thị Vai trò *@
+        <FluentGridItem md="12">
+            <div class="row-info">
+                <label>Vai trò:</label>
+                <div>@GetVaiTroText(Item.VaiTro)</div>
+            </div>
+        </FluentGridItem>
+
+    </FluentGrid>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Đóng</FluentButton>
+</FluentDialogFooter>
+
+<style>
+    .row-info {
+        display: grid;
+        grid-template-columns: 50% 50%;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+    }
+
+        .row-info label {
+            font-weight: 500;
+        }
+</style>

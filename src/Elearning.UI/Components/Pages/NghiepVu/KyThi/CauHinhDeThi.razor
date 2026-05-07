@@ -1,0 +1,292 @@
+﻿@page "/nghiep-vu/quan-ly-ky-thi/cau-hinh/{KyThiId:guid}"
+
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Commons.Querys.Grid
+@using Elearning.Shared.Commons.Querys.ModalQuery
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Dtos.KyThi
+@using Elearning.Shared.Contracts.Portal.Forms.KyThi
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 20px;">
+    @* <FluentButton Appearance="Appearance.Stealth" IconStart="@(new Icons.Regular.Size24.ArrowLeft())" OnClick="GoBack">Quay lại</FluentButton> *@
+    <h2>Cấu hình Đề thi</h2>
+</FluentStack>
+
+@if (!IsLoading)
+{
+    <FluentCard Style="min-height: 600px; padding: 20px; display: flex; flex-direction: column;">
+
+        <div style="background: #f3f2f1; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <FluentGrid Spacing="3" VerticalAlignment="VerticalAlignment.Bottom">
+                <FluentGridItem md="8">
+                    <FluentAutocomplete TOption="CauHoiOption"
+                                        Label="Tìm câu hỏi từ Ngân hàng"
+                                        OnOptionsSearch="OnSearchCauHoi"
+                                        OptionText="@(item => item.NoiDungDisplay)"
+                                        @bind-SelectedOptions="SelectedOptionsToAdd"
+                                        MaximumSelectedOptions="1"
+                                        Placeholder="Gõ từ khóa nội dung câu hỏi để tìm..."
+                                        Style="width: 100%;" />
+                </FluentGridItem>
+                <FluentGridItem md="4">
+                    <FluentSelect Label="Chọn phần thi"
+                                  TOption="string"
+                                  Value="@SelectedPhanThi.ToString()"
+                                  ValueChanged="@(v => SelectedPhanThi = Enum.Parse<EnumLoaiPhanThi>(v))"
+                                  Style="width:100%;">
+                        @foreach (var p in Enum.GetValues<EnumLoaiPhanThi>())
+                        {
+                            <FluentOption Value="@p.ToString()">@p.GetDescription()</FluentOption>
+                        }
+                    </FluentSelect>
+                </FluentGridItem>
+
+                <FluentGridItem md="12" Style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                    <FluentButton Appearance="Appearance.Accent" OnClick="OpenRandomMatrixDialog" Style="padding-right: 10px;" IconStart="@(new Icons.Regular.Size20.FlashAuto())">
+                        Tạo từ Ma trận 
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="AddQuestion" Style="width: 140px;" IconStart="@(new Icons.Regular.Size20.Add())">
+                        Thêm câu hỏi
+                    </FluentButton>
+                </FluentGridItem>
+            </FluentGrid>
+        </div>
+
+        <div style="flex-grow: 1; overflow-y: auto; padding-right: 10px; margin-bottom: 20px;">
+            @foreach (var phan in Enum.GetValues<EnumLoaiPhanThi>())
+            {
+                var qs = SelectedQuestions.Where(x => x.PhanThi == phan).OrderBy(x => x.ThuTu).ToList();
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #0078d4; border-bottom: 2px solid #0078d4; padding-bottom: 8px; margin-bottom: 15px;">
+                        @phan.GetDescription() (@qs.Count câu)
+                    </h3>
+
+                    @if (!qs.Any())
+                    {
+                        <div style="text-align:center; color:gray; padding: 20px; background: #fafafa; border-radius: 8px; border: 1px dashed #ccc;">
+                            <p style="margin: 0;">Chưa có câu hỏi nào trong phần này.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var q in qs)
+                        {
+                            <div style="border: 1px solid #e0e0e0; padding: 12px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; background: white;">
+                                <div style="width: 40px; font-weight: bold; color: #0078d4; font-size: 1.1em;">#@q.ThuTu</div>
+                                <div style="flex-grow: 1; margin: 0 15px; font-size: 0.95em;">
+                                    @((MarkupString)q.NoiDung)
+                                </div>
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.ArrowUp())" OnClick="@(() => MoveUp(q))" Disabled="@(q.ThuTu == 1)" />
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.ArrowDown())" OnClick="@(() => MoveDown(q))" Disabled="@(q.ThuTu == qs.Count)" />
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" Style="color:red;" OnClick="@(() => RemoveQuestion(q))" />
+                                </FluentStack>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="border-top: 1px solid #eee; padding-top: 15px;">
+            <FluentButton Appearance="Appearance.Neutral" OnClick="GoBack" Disabled="IsSaving" Style="margin-right: 10px;">Hủy bỏ</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="SaveConfig" Loading="IsSaving">Lưu cấu hình</FluentButton>
+        </FluentStack>
+
+    </FluentCard>
+}
+else
+{
+    <FluentProgressRing />
+}
+
+@code {
+    [Parameter] public Guid KyThiId { get; set; }
+
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+    [Inject] private NavigationManager NavManager { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+
+    private EnumLoaiPhanThi SelectedPhanThi = EnumLoaiPhanThi.TracNghiem;
+    private IEnumerable<CauHoiOption> SelectedOptionsToAdd = new List<CauHoiOption>();
+    private List<CauHoiKyThiUI> SelectedQuestions = new();
+
+    public class CauHoiKyThiUI
+    {
+        public Guid CauHoiId { get; set; }
+        public string NoiDung { get; set; } = string.Empty;
+        public EnumLoaiPhanThi PhanThi { get; set; }
+        public int ThuTu { get; set; }
+    }
+
+    public class CauHoiOption
+    {
+        public Guid Id { get; set; }
+        public string NoiDungDisplay { get; set; } = string.Empty;
+        public string RawHtml { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (KyThiId != Guid.Empty)
+        {
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KyThi/{KyThiId}/cau-hinh", HasAuthorization = true };
+            var res = await CallService.Get<List<CauHoiKyThiDto>>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                SelectedQuestions = res.Data.Select(x => new CauHoiKyThiUI
+                {
+                    CauHoiId = x.CauHoiId,
+                    PhanThi = x.PhanThi,
+                    ThuTu = x.ThuTu,
+                    NoiDung = x.NoiDungCauHoi ?? "[Không có nội dung]"
+                }).ToList();
+            }
+        }
+        IsLoading = false;
+    }
+
+    private async Task OnSearchCauHoi(OptionsSearchEventArgs<CauHoiOption> e)
+    {
+        var baseQuery = new BaseQuery { draw = 1, SearchIn = new List<string> { "NoiDung" }, Keyword = e.Text, gridRequest = new GridRequest { page = 1, pageSize = 20 } };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/CauHoi/getpaged", HasAuthorization = true };
+        var res = await CallService.Post<DataTableJson<CauHoiDto>>(req, baseQuery);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new CauHoiOption
+            {
+                Id = x.Id,
+                RawHtml = x.NoiDung ?? "",
+                NoiDungDisplay = System.Text.RegularExpressions.Regex.Replace(x.NoiDung ?? "[Ảnh]", "<.*?>", string.Empty)
+            }).ToList();
+        }
+    }
+
+    private async Task OpenRandomMatrixDialog()
+    {
+        var dialog = await DialogService.ShowDialogAsync<MaTranDeThiDialog>(KyThiId, new DialogParameters
+        {
+            Title = "Cấu hình Ma trận Đề thi tự động",
+            Width = "1500px",
+            Modal = true
+        });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data is bool isSuccess && isSuccess)
+        {
+            IsLoading = true;
+            StateHasChanged();
+            await OnInitializedAsync();
+        }
+    }
+
+    private void AddQuestion()
+    {
+        if (!SelectedOptionsToAdd.Any())
+        {
+            ToastService.ShowWarning("Vui lòng chọn 1 câu hỏi từ gợi ý.");
+            return;
+        }
+
+        var q = SelectedOptionsToAdd.First();
+        if (SelectedQuestions.Any(x => x.CauHoiId == q.Id))
+        {
+            ToastService.ShowWarning("Câu hỏi này đã có trong đề thi!");
+            return;
+        }
+
+        var newOrder = SelectedQuestions.Where(x => x.PhanThi == SelectedPhanThi).Count() + 1;
+        SelectedQuestions.Add(new CauHoiKyThiUI
+        {
+            CauHoiId = q.Id,
+            NoiDung = q.RawHtml,
+            PhanThi = SelectedPhanThi,
+            ThuTu = newOrder
+        });
+
+        SelectedOptionsToAdd = new List<CauHoiOption>();
+        StateHasChanged();
+    }
+
+    private void RemoveQuestion(CauHoiKyThiUI q)
+    {
+        SelectedQuestions.Remove(q);
+        ReorderQuestions(q.PhanThi);
+    }
+
+    // Tiện ích: Đẩy câu hỏi lên
+    private void MoveUp(CauHoiKyThiUI q)
+    {
+        if (q.ThuTu <= 1) return;
+        var prev = SelectedQuestions.First(x => x.PhanThi == q.PhanThi && x.ThuTu == q.ThuTu - 1);
+        prev.ThuTu++;
+        q.ThuTu--;
+    }
+
+    // Tiện ích: Đẩy câu hỏi xuống
+    private void MoveDown(CauHoiKyThiUI q)
+    {
+        var maxOrder = SelectedQuestions.Count(x => x.PhanThi == q.PhanThi);
+        if (q.ThuTu >= maxOrder) return;
+        var next = SelectedQuestions.First(x => x.PhanThi == q.PhanThi && x.ThuTu == q.ThuTu + 1);
+        next.ThuTu--;
+        q.ThuTu++;
+    }
+
+    // Hàm dùng chung để đánh lại số thứ tự sau khi xóa
+    private void ReorderQuestions(EnumLoaiPhanThi phanThi)
+    {
+        var qs = SelectedQuestions.Where(x => x.PhanThi == phanThi).OrderBy(x => x.ThuTu).ToList();
+        for (int i = 0; i < qs.Count; i++) qs[i].ThuTu = i + 1;
+    }
+
+    private async Task SaveConfig()
+    {
+        IsSaving = true;
+        try
+        {
+            var form = new CauHinhDeThiForm
+            {
+                DanhSachCauHoi = SelectedQuestions.Select(x => new CauHoiKyThiItemForm
+                {
+                    CauHoiId = x.CauHoiId,
+                    PhanThi = x.PhanThi,
+                    ThuTu = x.ThuTu
+                }).ToList()
+            };
+
+            var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/KyThi/{KyThiId}/cau-hinh", HasAuthorization = true };
+            var result = await CallService.Post<string>(req, form);
+
+            if (result.Status == StatusCode.OK)
+            {
+                ToastService.ShowSuccess("Lưu cấu hình đề thi thành công!");
+                GoBack();
+            }
+            else
+            {
+                ToastService.ShowError("Có lỗi xảy ra khi lưu.");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/nghiep-vu/quan-ly-ky-thi");
+    }
+}

@@ -1,0 +1,185 @@
+﻿@page "/danh-sach-khoa-hoc"
+@model DanhSachKhoaHocModel
+@{
+    ViewData["Title"] = "Danh sách khóa học";
+}
+
+<style>
+    /* --- STYLE CỘT BÊN TRÁI (MENU MÔN HỌC) --- */
+    .subject-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        position: sticky;
+        top: 100px; /* Giữ menu đứng yên khi cuộn trang */
+    }
+
+    .subject-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        background-color: #fcfcfc;
+        border: 1.5px solid #eaeaea;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #1a365d;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+        /* Hiệu ứng khi hover hoặc đang được chọn (Active) */
+        .subject-item:hover, .subject-item.active {
+            border-color: #0d6efd; /* Viền xanh dương */
+            background-color: #f0f7ff; /* Nền xanh nhạt */
+            color: #0d6efd;
+        }
+
+    .subject-icon {
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        border-radius: 10px;
+        margin-right: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        font-size: 1.2rem;
+    }
+
+    /* --- STYLE CỘT BÊN PHẢI (CARD KHÓA HỌC) --- */
+    .course-card {
+        transition: all 0.3s ease;
+        border: 1px solid #f0f0f0;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+        }
+
+    .course-img-wrapper {
+        height: 160px;
+        position: relative;
+    }
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            <div class="subject-menu">
+                <a href="/danh-sach-khoa-hoc" class="subject-item @(Model.SelectedMonHoc == null ? "active" : "")">
+                    <div class="subject-icon"><i class="fa-solid fa-border-all"></i></div> Tất cả
+                </a>
+                @foreach (var mon in Model.LstMonHoc)
+                {
+                    @* XÓA .GetDiscription() ở dòng dưới *@
+                    <a href="/danh-sach-khoa-hoc?monHoc=@mon.Value"
+                       class="subject-item @(Model.SelectedMonHoc == mon.Value ? "active" : "")">
+                        <div class="subject-icon">@mon.Icon</div> @mon.Text
+                    </a>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="row g-4">
+                @foreach (var item in Model.LstKhoaHoc)
+                {
+                    <div class="col-md-4">
+                        <a href="/CourseDetail?id=@item.Id" class="text-decoration-none text-dark">
+                            <div class="card h-100 course-card shadow-sm">
+                                <img src="@(item.HinhAnhUrl ?? "https://placehold.co/600x400")" class="card-img-top" style="height:160px; object-fit:cover;">
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-2 text-truncate-2" style="height: 40px;">@item.TenKhoaHoc</h6>
+
+                                    <p class="text-muted small mb-1">
+                                        <i class="fa-solid fa-chalkboard-user me-1 text-primary"></i>
+                                        GV: @(string.IsNullOrEmpty(item.TenGiangVien) ? "Đang cập nhật" : item.TenGiangVien)
+                                    </p>
+
+                                    <p class="text-muted small mb-3">
+                                        <i class="fa-solid fa-play-circle me-1 text-danger"></i>
+                                        @item.SoBaiHoc bài học
+                                    </p>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-auto">
+                                        @if (item.GiaBan > 0)
+                                        {
+                                            <span class="text-danger fw-bold fs-5">@item.GiaBan?.ToString("N0") ₫</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-success fw-bold fs-5">Miễn phí</span>
+                                        }
+
+                                        <span class="btn btn-sm btn-outline-primary rounded-pill">Chi tiết</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="mt-5">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="/danh-sach-khoa-hoc?monHoc=@Model.SelectedMonHoc&p=@i">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const subjectItems = document.querySelectorAll('.subject-item');
+            const courseItems = document.querySelectorAll('.course-item');
+            const noCourseMessage = document.getElementById('noCourseMessage');
+
+            subjectItems.forEach(item => {
+                item.addEventListener('click', function () {
+                    // 1. Xóa class 'active' ở tất cả các tab
+                    subjectItems.forEach(i => i.classList.remove('active'));
+                    // 2. Thêm class 'active' vào tab vừa click
+                    this.classList.add('active');
+
+                    // 3. Lấy giá trị data-filter của tab được click
+                    const filterValue = this.getAttribute('data-filter');
+                    let visibleCount = 0;
+
+                    // 4. Lặp qua các khóa học để Ẩn/Hiện
+                    courseItems.forEach(course => {
+                        const courseCategory = course.getAttribute('data-category');
+
+                        if (filterValue === 'all' || filterValue === courseCategory) {
+                            course.style.display = 'block';
+                            visibleCount++;
+                        } else {
+                            course.style.display = 'none';
+                        }
+                    });
+
+                    // 5. Hiển thị thông báo nếu môn học đó trống
+                    if (visibleCount === 0) {
+                        noCourseMessage.style.display = 'block';
+                    } else {
+                        noCourseMessage.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+}

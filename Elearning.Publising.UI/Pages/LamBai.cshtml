@@ -1,0 +1,446 @@
+﻿@page "/lam-bai"
+@model Elearning.Publising.UI.Pages.LamBaiModel
+@{
+    ViewData["Title"] = Model.ActiveQuiz?.TenBo ?? "Phòng thi trực tuyến";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="lms-wrapper container-fluid px-4 mt-4 mb-5">
+    <nav aria-label="breadcrumb" class="mb-3 small">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Trang Chủ</a></li>
+            <li class="breadcrumb-item"><a href="/Exam">Ngân hàng đề thi</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.ActiveQuiz.TenBo</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-12 transition-all duration-300" id="main-quiz-column">
+
+            <div id="quiz-intro-screen" class="text-center p-5 bg-white shadow-sm rounded border-top border-4 border-warning">
+                <h2 class="fw-bold text-danger mb-3">@Model.ActiveQuiz.TenBo</h2>
+                <p class="text-muted mb-4">@(string.IsNullOrEmpty(Model.ActiveQuiz.MoTa) ? "Đề thi thử trực tuyến bám sát cấu trúc chuẩn." : Model.ActiveQuiz.MoTa)</p>
+
+                <div class="d-flex justify-content-center gap-4 mb-5">
+                    <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
+                        <i class="fa-solid fa-list-ol fa-2x text-primary mb-2"></i>
+                        <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)</h4>
+                        <small class="text-muted">Câu hỏi</small>
+                    </div>
+                    <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
+                        <i class="fa-regular fa-clock fa-2x text-warning mb-2"></i>
+                        <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ThoiLuongPhut)</h4>
+                        <small class="text-muted">Phút</small>
+                    </div>
+                </div>
+
+                @if (Model.ActiveQuiz.ChiTietBoCauHois != null && Model.ActiveQuiz.ChiTietBoCauHois.Any())
+                {
+                    <button id="btnBatDau" class="btn btn-warning btn-lg text-white fw-bold rounded-pill px-5 py-3 shadow">
+                        <i class="fa-solid fa-play me-2"></i> BẮT ĐẦU LÀM BÀI
+                    </button>
+                }
+                else
+                {
+                    <div class="alert alert-danger">Đề thi này hiện đang trống!</div>
+                }
+            </div>
+
+            <div id="quiz-questions-container" style="display: none;">
+                <h4 class="fw-bold text-center text-danger mb-2">@Model.ActiveQuiz.TenBo</h4>
+                <hr class="mb-4" />
+
+                @foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                {
+                    <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-primary" id="question_@question.ThuTu" data-cauhoi-id="@question.CauHoiId">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold m-0 text-primary">Câu @question.ThuTu</h5>
+                        </div>
+
+                        <div class="mb-4" style="font-size: 1.05rem;">
+                            @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                            {
+                                <div>@Html.Raw(question.NoiDungCauHoi)</div>
+                            }
+                            @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
+                            {
+                                <div class="mt-3">
+                                    <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                </div>
+                            }
+                        </div>
+
+                        @if (question.DapAns != null && question.DapAns.Any())
+                        {
+                            <div class="d-flex flex-column gap-2 mt-3">
+                                @{
+                                    char prefix = 'A';
+                                }
+                                @foreach (var dapAn in question.DapAns.OrderBy(d => d.ThuTu))
+                                {
+                                    <label class="quiz-option p-3 border rounded cursor-pointer hover-bg-light d-flex align-items-start">
+                                        <input type="radio" name="q_@question.CauHoiId" value="@dapAn.Id" class="me-3 mt-1" style="transform: scale(1.3);">
+                                        <span class="fw-bold me-2">@prefix.</span>
+                                        <div class="d-flex flex-column">
+                                            @if (!string.IsNullOrEmpty(dapAn.NoiDung))
+                                            {
+                                                <div>@Html.Raw(dapAn.NoiDung)</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(dapAn.HinhAnhUrl))
+                                            {
+                                                <div class="mt-2"><img src="@dapAn.HinhAnhUrl" class="img-fluid rounded border" style="max-height: 150px;" /></div>
+                                            }
+                                        </div>
+                                    </label>
+                                    prefix++;
+                                }
+                            </div>
+                        }
+                        else if (question.MenhDeDungSais != null && question.MenhDeDungSais.Any())
+                        {
+                            <div class="alert alert-info py-2 mb-3">Chọn <strong>Đúng</strong> hoặc <strong>Sai</strong> cho từng ý:</div>
+                            <div class="d-flex flex-column gap-3 mt-2">
+                                @{
+                                    char mdPrefix = 'a';
+                                }
+                                @foreach (var md in question.MenhDeDungSais.OrderBy(m => m.ThuTu))
+                                {
+                                    <div class="p-3 border rounded bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                        <div class="d-flex">
+                                            <span class="fw-bold me-2">@mdPrefix)</span>
+                                            <span>@Html.Raw(md.NoiDung)</span>
+                                        </div>
+                                        <div class="d-flex gap-3 bg-white p-2 rounded shadow-sm border" style="min-width: 150px; justify-content: center;">
+                                            <label class="cursor-pointer text-success fw-bold"><input type="radio" name="md_@md.Id" value="true" class="me-2"> Đúng</label>
+                                            <div style="width: 1px; background: #ddd;"></div>
+                                            <label class="cursor-pointer text-danger fw-bold"><input type="radio" name="md_@md.Id" value="false" class="me-2"> Sai</label>
+                                        </div>
+                                    </div>
+                                    mdPrefix++;
+                                }
+                            </div>
+                        }
+                        else if (question.DapAnDienKetQuas != null && question.DapAnDienKetQuas.Any())
+                        {
+                            <div class="mt-4 p-4 border border-2 border-primary rounded" style="background-color: #f8faff;">
+                                <label class="fw-bold text-primary mb-2">Nhập kết quả của bạn:</label>
+                                <input type="text" class="form-control form-control-lg border-primary shadow-sm" name="dkq_@question.CauHoiId">
+                            </div>
+                        }
+
+                        <div class="text-end mt-3">
+                            <div class="form-check form-switch d-inline-block">
+                                <input class="form-check-input" type="checkbox" id="review_@question.Id">
+                                <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div id="quiz-result-screen" class="text-center p-5 py-5 bg-white shadow-sm rounded border-top border-4 border-success mt-2" style="display: none; min-height: 400px;">
+                <i class="fa-solid fa-circle-check text-success mb-4" style="font-size: 5rem;"></i>
+                <h2 class="fw-bold text-success mb-3">NỘP BÀI THÀNH CÔNG!</h2>
+                <p class="text-muted fs-5 mb-4">Bạn đã hoàn thành bài thi. Dưới đây là kết quả của bạn:</p>
+
+                <div class="p-4 bg-light rounded mb-5 d-inline-block border border-success shadow-sm" style="min-width: 280px;">
+                    <div class="text-muted mb-2 fs-5">Điểm số</div>
+                    <div class="fw-bold text-danger" style="font-size: 4rem; line-height: 1;"><span id="final-score">0</span><span class="fs-3 text-dark">/10</span></div>
+                </div>
+                <br />
+                <button class="btn btn-outline-primary btn-lg rounded-pill px-5 py-3 fw-bold" onclick="window.location.href='/Exam'">
+                    <i class="fa-solid fa-arrow-left me-2"></i> QUAY VỀ NGÂN HÀNG ĐỀ
+                </button>
+            </div>
+
+        </div>
+
+        <div class="col-lg-3" id="quiz-tracker-column" style="display: none;">
+            <div id="quiz-tracker-container" class="quiz-tracker-box bg-white p-4 rounded shadow-sm position-sticky" style="top: 80px;">
+                <div class="tracker-stats d-flex justify-content-between text-center mb-4 pb-3 border-bottom">
+                    <div class="flex-fill">
+                        <div class="stat-label text-muted small mb-1">Tiến độ</div>
+                        <div class="stat-value fw-bold fs-4">
+                            <span id="answered-count" class="text-success">0</span> / @(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)
+                        </div>
+                    </div>
+                    <div style="width: 1px; background: #eee;"></div>
+                    <div class="flex-fill">
+                        <div class="stat-label text-muted small mb-1">Thời gian</div>
+                        <div id="quiz-timer" class="stat-value tracker-timer fw-bold fs-4 text-danger">@(Model.ActiveQuiz.ThoiLuongPhut):00</div>
+                    </div>
+                </div>
+
+                <div class="question-palette custom-scrollbar d-flex flex-wrap gap-2 justify-content-center mb-4">
+                    @if (Model.ActiveQuiz.ChiTietBoCauHois != null)
+                    {
+                        foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                        {
+                            <a href="#question_@question.ThuTu" id="tracker_@question.ThuTu" class="tracker-btn btn btn-outline-secondary rounded-circle d-flex justify-content-center align-items-center text-decoration-none" style="width: 40px; height: 40px; padding: 0; transition: 0.3s;">
+                                @question.ThuTu
+                            </a>
+                        }
+                    }
+                </div>
+
+                <div class="d-grid mb-4">
+                    <button id="btnNopBai" class="btn btn-warning text-white fw-bold rounded-pill py-3 fs-5" style="background: #f39c12;">NỘP BÀI</button>
+                </div>
+
+                <div class="tracker-legend small text-muted">
+                    <div class="d-flex align-items-center mb-2"><div class="rounded-circle bg-success me-2" style="width: 15px; height: 15px;"></div> Câu đã làm</div>
+                    <div class="d-flex align-items-center mb-2"><div class="rounded-circle border border-secondary me-2" style="width: 15px; height: 15px;"></div> Câu chưa làm</div>
+                    <div class="d-flex align-items-center"><div class="rounded-circle me-2" style="width: 15px; height: 15px; background-color: #a569bd;"></div> Cần kiểm tra lại</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div class="modal fade" id="thongBaoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTitle">Thông báo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="modalIcon" class="mb-3">
+                </div>
+                <p id="modalMessage" class="fs-5 mb-0 text-secondary"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-primary px-4 rounded-pill fw-bold" id="btnModalConfirm" data-bs-dismiss="modal">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+<form id="antiForgeryForm" method="post">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // --- KHAI BÁO BIẾN ---
+            const introScreen = document.getElementById('quiz-intro-screen');
+            const questionsContainer = document.getElementById('quiz-questions-container');
+            const trackerColumn = document.getElementById('quiz-tracker-column');
+            const resultScreen = document.getElementById('quiz-result-screen');
+            const mainQuizColumn = document.getElementById('main-quiz-column');
+            const btnBatDau = document.getElementById('btnBatDau');
+            const btnNopBai = document.getElementById('btnNopBai');
+            const timerDisplay = document.getElementById('quiz-timer');
+            const answeredCountDisplay = document.getElementById('answered-count');
+            const token = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]').value;
+
+            let countdownInterval;
+            let timeInSeconds = @(Model.ActiveQuiz.ThoiLuongPhut) * 60;
+            let currentBaiLamId = null;
+            let isExamStarted = false;
+            let soLanViPham = 0;
+            const MAX_VI_PHAM = 3;
+
+            // --- 1. HÀM THÔNG BÁO MODAL (BẢN CHUẨN) ---
+            function showThongBao(title, message, type = 'info', onConfirm = null) {
+                document.getElementById('modalTitle').innerText = title;
+                document.getElementById('modalMessage').innerText = message;
+                const iconContainer = document.getElementById('modalIcon');
+                const confirmBtn = document.getElementById('btnModalConfirm');
+
+                confirmBtn.className = 'btn px-4 rounded-pill fw-bold ';
+                let iconHtml = '';
+                switch (type) {
+                    case 'success': iconHtml = '<i class="fa-solid fa-circle-check text-success" style="font-size: 4rem;"></i>'; confirmBtn.classList.add('btn-success'); break;
+                    case 'error': iconHtml = '<i class="fa-solid fa-circle-xmark text-danger" style="font-size: 4rem;"></i>'; confirmBtn.classList.add('btn-danger'); break;
+                    case 'warning': iconHtml = '<i class="fa-solid fa-triangle-exclamation text-warning" style="font-size: 4rem;"></i>'; confirmBtn.classList.add('btn-warning', 'text-white'); break;
+                    case 'question': iconHtml = '<i class="fa-solid fa-circle-question text-primary" style="font-size: 4rem;"></i>'; confirmBtn.classList.add('btn-primary'); break;
+                    default: iconHtml = '<i class="fa-solid fa-circle-info text-primary" style="font-size: 4rem;"></i>'; confirmBtn.classList.add('btn-primary');
+                }
+                iconContainer.innerHTML = iconHtml;
+
+                const modalEl = document.getElementById('thongBaoModal');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                if (onConfirm) {
+                    modalEl.addEventListener('hidden.bs.modal', () => { onConfirm(); }, { once: true });
+                }
+            }
+
+            // --- 2. BẮT ĐẦU LÀM BÀI ---
+            if (btnBatDau) {
+                btnBatDau.addEventListener('click', async function() {
+                    btnBatDau.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuẩn bị...';
+                    btnBatDau.disabled = true;
+
+                    try {
+                        const response = await fetch('?handler=BatDauThi', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                            body: JSON.stringify({ KyThiId: "@(Model.ActiveQuiz?.Id)" })
+                        });
+                        const res = await response.json();
+
+                        if (res.success) {
+                            currentBaiLamId = res.baiLamId;
+                            isExamStarted = true;
+                            introScreen.style.display = 'none';
+                            questionsContainer.style.display = 'block';
+                            if(mainQuizColumn) mainQuizColumn.classList.replace('col-lg-12', 'col-lg-9');
+                            if(trackerColumn) trackerColumn.style.display = 'block';
+                            startTimer();
+                        } else {
+                            showThongBao("Thông báo", "Vui lòng đăng nhập để thực hiện bài thi!", "warning");
+                            btnBatDau.innerHTML = '<i class="fa-solid fa-play me-2"></i> BẮT ĐẦU LÀM BÀI';
+                            btnBatDau.disabled = false;
+                        }
+                    } catch (e) {
+                        showThongBao("Lỗi", "Không thể kết nối máy chủ.", "error");
+                        btnBatDau.disabled = false;
+                    }
+                });
+            }
+
+            // --- 3. GIÁM THỊ ẢO ---
+            function ghiNhanViPham(loai, chiTiet) {
+                if (!isExamStarted || !currentBaiLamId) return;
+                soLanViPham++;
+                showThongBao(`Cảnh báo vi phạm (${soLanViPham}/${MAX_VI_PHAM})`, chiTiet, "warning");
+
+                fetch('?handler=LogViPham', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ BaiLamId: currentBaiLamId, LoaiViPham: loai, ChiTiet: chiTiet })
+                });
+
+                if (soLanViPham >= MAX_VI_PHAM) {
+                    showThongBao("Đình chỉ thi!", "Bạn vi phạm quá số lần. Hệ thống tự động thu bài!", "error", () => {
+                        submitQuizData();
+                    });
+                }
+            }
+
+            document.addEventListener("visibilitychange", () => { if (document.visibilityState === 'hidden') ghiNhanViPham(1, "Học viên rời khỏi màn hình thi."); });
+            document.addEventListener('copy', (e) => { if (isExamStarted) { e.preventDefault(); ghiNhanViPham(3, "Hành vi sao chép nội dung bị cấm."); }});
+
+            // --- 4. TIMER ---
+            function startTimer() {
+                countdownInterval = setInterval(() => {
+                    timeInSeconds--;
+                    let m = Math.floor(timeInSeconds / 60);
+                    let s = timeInSeconds % 60;
+                    if(timerDisplay) timerDisplay.innerText = `${m < 10 ? "0"+m : m}:${s < 10 ? "0"+s : s}`;
+
+                    if (timeInSeconds <= 0) {
+                        clearInterval(countdownInterval);
+                        showThongBao("Hết giờ!", "Thời gian làm bài đã kết thúc. Hệ thống tự động nộp bài.", "warning", () => {
+                            submitQuizData();
+                        });
+                    }
+                }, 1000);
+            }
+
+            // --- 5. NỘP BÀI ---
+            btnNopBai.addEventListener('click', () => {
+                // Thay thế confirm browser bằng Modal thông báo
+                showThongBao("Xác nhận", "Bạn có chắc chắn muốn kết thúc bài làm và nộp bài không?", "question", () => {
+                    submitQuizData();
+                });
+            });
+
+            async function submitQuizData() {
+                clearInterval(countdownInterval);
+                isExamStarted = false;
+                btnNopBai.disabled = true;
+                btnNopBai.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                const isLive = localStorage.getItem('activeExamMode') === 'thi-live';
+                let payload = {
+                    boCauHoiId: "@(Model.ActiveQuiz?.Id)",
+                    baiLamId: currentBaiLamId,
+                    isLiveExam: isLive,
+                    danhSachTraLoi: []
+                };
+
+                // --- THU THẬP ĐÁP ÁN (FIXED: Lấy đủ 3 loại câu hỏi) ---
+                document.querySelectorAll('.quiz-question-card').forEach(card => {
+                    let cauHoiId = card.getAttribute('data-cauhoi-id');
+                    let traLoi = { cauHoiId: cauHoiId, dapAnId: null, giaTriNhap: null, menhDes: [] };
+                    let hasAnswer = false;
+
+                    // 1. Trắc nghiệm
+                    let radio = card.querySelector('input[type="radio"][name^="q_"]:checked');
+                    if (radio) { traLoi.dapAnId = radio.value; hasAnswer = true; }
+
+                    // 2. Điền kết quả
+                    let textInput = card.querySelector('input[type="text"][name^="dkq_"]');
+                    if (textInput && textInput.value.trim() !== '') {
+                        traLoi.giaTriNhap = parseFloat(textInput.value.trim().replace(',', '.'));
+                        hasAnswer = true;
+                    }
+
+                    // 3. Đúng/Sai (Mệnh đề)
+                    let mdChecked = card.querySelectorAll('input[type="radio"][name^="md_"]:checked');
+                    if (mdChecked.length > 0) {
+                        mdChecked.forEach(md => {
+                            traLoi.menhDes.push({
+                                menhDeId: md.name.replace('md_', ''),
+                                luaChonCuaHocVien: md.value === 'true'
+                            });
+                        });
+                        hasAnswer = true;
+                    }
+
+                    if (hasAnswer) payload.danhSachTraLoi.push(traLoi);
+                });
+
+                try {
+                    const response = await fetch('?handler=SubmitQuiz', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify(payload)
+                    });
+                    const res = await response.json();
+
+                    if (res.success) {
+                        questionsContainer.style.display = 'none';
+                        if(trackerColumn) trackerColumn.style.display = 'none';
+                        mainQuizColumn.classList.replace('col-lg-9', 'col-lg-12');
+
+                        if (res.isLive) {
+                            showThongBao("Thành công", res.message, "success", () => { window.location.href = "/Exam"; });
+                        } else {
+                            document.getElementById('final-score').innerText = res.diem;
+                            resultScreen.style.display = 'block';
+                            window.scrollTo(0, 0);
+                        }
+                    } else {
+                        showThongBao("Thất bại", res.message, "error");
+                        btnNopBai.disabled = false;
+                        btnNopBai.innerText = 'NỘP BÀI';
+                    }
+                } catch (e) {
+                    showThongBao("Lỗi", "Không thể gửi dữ liệu về máy chủ.", "error");
+                    btnNopBai.disabled = false;
+                }
+            }
+
+            // --- 6. LOGIC TRACKER ĐỔI MÀU (Giữ nguyên của bác) ---
+            const updateTracker = () => {
+                let count = 0;
+                document.querySelectorAll('.quiz-question-card').forEach(card => {
+                    let qNum = card.id.split('_')[1];
+                    let isDone = card.querySelector('input[type="radio"]:checked') ||
+                                 (card.querySelector('input[type="text"]') && card.querySelector('input[type="text"]').value.trim() !== '');
+                    let btn = document.getElementById('tracker_' + qNum);
+                    if(isDone) {
+                        btn.classList.replace('btn-outline-secondary', 'btn-success');
+                        count++;
+                    }
+                });
+                if(answeredCountDisplay) answeredCountDisplay.innerText = count;
+            };
+            document.addEventListener('change', (e) => { if(e.target.matches('input')) updateTracker(); });
+        });
+    </script>
+}

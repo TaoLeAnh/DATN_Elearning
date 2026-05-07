@@ -1,0 +1,226 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Application.Dtos
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="12">
+                    <FluentAutocomplete TOption="NguoiDungOption"
+                                        Label="Chọn Giáo viên (*)"
+                                        OnOptionsSearch="OnSearchGiaoVien"
+                                        OptionText="@(item => item.Ten)"
+                                        @bind-SelectedOptions="SelectedGiaoViens"
+                                        MaximumSelectedOptions="1"
+                                        Placeholder="Gõ để tìm tên giáo viên..."
+                                        Style="width: 100%;"
+                                        Disabled="@Content.IsEditMode" />
+                    @* Không cho đổi người nếu đang ở chế độ Edit (Quan hệ 1-1) *@
+                    <ValidationMessage For="@(() => ModelForm.NguoiDungId)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentSelect Label="Môn học chuyên môn (*)"
+                                  TOption="string"
+                                  Value="@(((int)ModelForm.MonHocChuyenMon).ToString())"
+                                  ValueChanged="@(v => ModelForm.MonHocChuyenMon = (MonHocEnum)int.Parse(v))"
+                                  Style="width: 100%;">
+                        @foreach (Enum item in Enum.GetValues(typeof(MonHocEnum)))
+                        {
+                            <FluentOption Value="@(Convert.ToInt32(item).ToString())">@item.GetDescription()</FluentOption>
+                        }
+                    </FluentSelect>
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <div style="margin-top: 4px;">
+                        <label style="font-weight: 500; margin-bottom: 8px; display: block; font-size: 14px;">Ảnh đại diện</label>
+                        <ImagePicker ImageUrl="@ModelForm.AnhDaiDienUrl"
+                                     Multiple="false"
+                                     OnChange="@((string url) => ModelForm.AnhDaiDienUrl = url)"
+                                     OnClear="@(() => ModelForm.AnhDaiDienUrl = string.Empty)" />
+                    </div>
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentTextArea @bind-Value="ModelForm.ThanhTichNoiBat" Label="Thành tích nổi bật" Rows="4" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.ThanhTichNoiBat)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="12">
+                    <FluentTextArea @bind-Value="ModelForm.PhuongPhapGiangDay" Label="Phương pháp giảng dạy" Rows="4" Style="width: 100%;" />
+                    <ValidationMessage For="@(() => ModelForm.PhuongPhapGiangDay)" Style="color:red;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu hồ sơ</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private HoSoGiaoVienForm ModelForm = new HoSoGiaoVienForm
+    {
+        MonHocChuyenMon = Enum.GetValues(typeof(MonHocEnum)).Cast<MonHocEnum>().FirstOrDefault()
+    };
+
+    public class NguoiDungOption
+    {
+        public Guid Id { get; set; }
+        public string Ten { get; set; } = string.Empty;
+    }
+
+    private IEnumerable<NguoiDungOption> _selectedGiaoViens = new List<NguoiDungOption>();
+    private IEnumerable<NguoiDungOption> SelectedGiaoViens
+    {
+        get => _selectedGiaoViens;
+        set
+        {
+            _selectedGiaoViens = value;
+            ModelForm.NguoiDungId = _selectedGiaoViens.FirstOrDefault()?.Id ?? Guid.Empty;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/HoSoGiaoVien/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<HoSoGiaoVienDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm = new HoSoGiaoVienForm
+                    {
+                        NguoiDungId = res.Data.NguoiDungId,
+                        AnhDaiDienUrl = res.Data.AnhDaiDienUrl,
+                        MonHocChuyenMon = res.Data.MonHocChuyenMon,
+                        ThanhTichNoiBat = res.Data.ThanhTichNoiBat,
+                        PhuongPhapGiangDay = res.Data.PhuongPhapGiangDay
+                    };
+
+                    if (ModelForm.NguoiDungId != Guid.Empty)
+                    {
+                        // Gọi API để lấy tên người dùng hiển thị vào ô Autocomplete
+                        var reqC = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/NguoiDung/{ModelForm.NguoiDungId}", HasAuthorization = true };
+                        var resC = await CallService.Get<NguoiDungDto>(reqC); // Nhớ đảm bảo có NguoiDungDto
+                        if (resC.Data != null)
+                        {
+                            _selectedGiaoViens = new List<NguoiDungOption> {
+                                new NguoiDungOption { Id = resC.Data.Id, Ten = resC.Data.Ten }
+                            };
+                        }
+                    }
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchGiaoVien(OptionsSearchEventArgs<NguoiDungOption> e)
+    {
+        // Gọi API tìm kiếm bảng NguoiDung
+        var query = new { SearchText = e.Text, PageIndex = 1, PageSize = 20 };
+        var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/NguoiDung/getpaged", HasAuthorization = true };
+
+        var res = await CallService.Post<DataTableJson<NguoiDungDto>>(req, query);
+
+        if (res.Status == StatusCode.OK && res.Data?.Data != null)
+        {
+            e.Items = res.Data.Data.Select(x => new NguoiDungOption
+            {
+                Id = x.Id,
+                Ten = x.Ten
+            }).ToList();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (ModelForm.NguoiDungId == Guid.Empty)
+        {
+            ToastService.ShowWarning("Vui lòng chọn Giáo viên.");
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/HoSoGiaoVien/{Content.Id}" : "/HoSoGiaoVien",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

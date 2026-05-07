@@ -1,0 +1,66 @@
+﻿@inject IConfiguration Config
+@using Elearning.Shared.Commons.Model.Commons
+@using Microsoft.AspNetCore.Http
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/@(Config.GetValue<string>("AppBasePath"))" />
+    <link rel="stylesheet" href="css/site.css" />
+    <link rel="stylesheet" href="Elearning.UI.styles.css" />
+    <link href="lib/fa6.6.pro/css/fontawesome-all.min.css" rel="stylesheet" />
+    <HeadOutlet @rendermode="RenderModeForPage" />
+    <link rel="icon" type="image/svg+xml" href="/img/logo-pm.svg">
+    <link href="_content/Z.Blazor.Diagrams/style.min.css" rel="stylesheet" />
+    <link href="_content/Z.Blazor.Diagrams/default.styles.min.css" rel="stylesheet" />
+</head>
+<body>
+    <CascadingValue Value="FakeCurrentUser">
+        <Routes @rendermode="RenderModeForPage" />
+    </CascadingValue>
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
+    <script src="_content/BlazorMonaco/jsInterop.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <script src="_content/Z.Blazor.Diagrams/script.min.js"></script>
+    <script src="lib/tinymce7.9.1/config.js" asp-append-version="true"></script>
+    <script src="lib/tinymce7.9.1/tinymce.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/print.js"></script>
+
+</body>
+</html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    // ✅ Tất cả fields/properties gom vào 1 block @code duy nhất
+    private CurrentUserDto FakeCurrentUser { get; } = new CurrentUserDto
+    {
+        UserName = "dev.user",
+        FullName = "Developer",
+        SupperUser = true,
+        Menus = new List<MenuItemDto>
+        {
+            new MenuItemDto { Id = Guid.NewGuid() },
+            new MenuItemDto { Id = Guid.NewGuid() },
+            new MenuItemDto { Id = Guid.NewGuid() }
+        }
+    };
+
+    private IComponentRenderMode? RenderModeForPage
+    {
+        get
+        {
+            var path = HttpContext?.Request?.Path;
+            if (path?.StartsWithSegments("/account") == true)
+                return null;
+
+            return new InteractiveServerRenderMode(prerender: false);
+        }
+    }
+}

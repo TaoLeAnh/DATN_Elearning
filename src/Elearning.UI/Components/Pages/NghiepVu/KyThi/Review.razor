@@ -1,0 +1,178 @@
+﻿@page "/nghiep-vu/quan-ly-ky-thi/bai-lam/{BaiLamId:guid}/review"
+
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Stealth" IconStart="@(new Icons.Regular.Size24.ArrowLeft())" OnClick="GoBack">Quay lại danh sách</FluentButton>
+    <h2>Chi tiết Bài làm Sinh viên</h2>
+</FluentStack>
+
+@if (IsLoading)
+{
+    <FluentProgressRing />
+}
+else if (Model != null)
+{
+    <FluentCard Style="padding: 20px; margin-bottom: 20px; background-color: #f8f9fa;">
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="8">
+                <h3 style="margin-top: 0; color: #0078d4;">@Model.TenKyThi</h3>
+                <div style="font-size: 1.1em; margin-bottom: 5px;">Sinh viên: <b>@Model.TenSinhVien</b> (@Model.MaSinhVien)</div>
+                <div style="margin-bottom: 8px;">Thời gian làm bài: <b>@Model.ThoiDiemBatDau.ToString("dd/MM/yyyy HH:mm")</b> - <b>@(Model.ThoiDiemNop?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp")</b></div>
+
+                @if (Model.IsKyThiPublic || !string.IsNullOrEmpty(Model.MonHoc))
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                        @if (!string.IsNullOrEmpty(Model.MonHoc))
+                        {
+                            <FluentBadge Appearance="Appearance.Neutral">Môn: @Model.MonHoc</FluentBadge>
+                        }
+                        @if (Model.IsKyThiPublic)
+                        {
+                            <FluentBadge Fill="success" Color="white">Đề công khai (Public)</FluentBadge>
+                        }
+                    </FluentStack>
+                }
+            </FluentGridItem>
+
+            <FluentGridItem md="4" Style="text-align: right;">
+                <div style="font-size: 1.2em; color: gray;">Điểm số</div>
+                <div style="font-size: 3em; font-weight: bold; color: @(Model.Diem >= 5 ? "#107c10" : "#d13438"); line-height: 1;">
+                    @Model.Diem
+                </div>
+                <div style="font-size: 1.1em; margin-top: 5px;">Đúng <b>@Model.SoCauDung</b> / @Model.TongSoCau câu</div>
+            </FluentGridItem>
+        </FluentGrid>
+    </FluentCard>
+
+    <div style="margin-bottom: 40px;">
+        @foreach (var cauHoi in Model.DanhSachCauHoi)
+        {
+            var borderColor = cauHoi.IsCorrect ? "#107c10" : "#d13438";
+            var bgColor = cauHoi.IsCorrect ? "#f3fcf4" : "#fdf3f4";
+
+            <FluentCard Style="@($"padding: 20px; margin-bottom: 15px; border-left: 6px solid {borderColor}; background-color: {bgColor};")">
+
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" HorizontalGap="10">
+                    <div style="font-weight: bold; font-size: 1.1em; min-width: 70px;">Câu @cauHoi.ThuTu:</div>
+                    <div style="flex-grow: 1; font-size: 1.1em; margin-bottom: 15px;">
+                        @((MarkupString)cauHoi.NoiDungCauHoi)
+                        <div style="margin-top: 5px;">
+                            <FluentBadge Appearance="Appearance.Neutral">@cauHoi.PhanThi.GetDescription()</FluentBadge>
+                        </div>
+                    </div>
+                    <div>
+                        @if (cauHoi.IsCorrect)
+                        {
+                            <FluentIcon Value="@(new Icons.Filled.Size24.CheckmarkCircle())" Color="Color.Success" />
+                        }
+                        else
+                        {
+                            <FluentIcon Value="@(new Icons.Filled.Size24.DismissCircle())" Color="Color.Error" />
+                        }
+                    </div>
+                </FluentStack>
+
+                @if (cauHoi.PhanThi == EnumLoaiPhanThi.TracNghiem)
+                {
+                    <div style="margin-left: 80px;">
+                        @foreach (var dapAn in cauHoi.DapAns)
+                        {
+                            var isStudentPick = (cauHoi.DapAnHocVienChonId == dapAn.Id);
+                            var isCorrectPick = dapAn.LaDapAnDung;
+
+                            var textWeight = (isStudentPick || isCorrectPick) ? "bold" : "normal";
+                            var textColor = isCorrectPick ? "#107c10" : (isStudentPick && !isCorrectPick ? "#d13438" : "black");
+
+                            <div style="padding: 8px; margin-bottom: 5px; border-radius: 4px; display: flex; align-items: center; border: 1px solid @(isStudentPick? textColor : "transparent")">
+                                <div style="margin-right: 10px; display: flex; align-items: center;">
+                                    @if (isStudentPick && isCorrectPick)
+                                    {
+                                        <FluentIcon Value="@(new Icons.Filled.Size20.CheckmarkSquare())" Color="Color.Success" />
+                                    }
+                                    else if (isStudentPick && !isCorrectPick)
+                                    {
+                                        <FluentIcon Value="@(new Icons.Filled.Size20.DismissSquare())" Color="Color.Error" />
+                                    }
+                                    else if (!isStudentPick && isCorrectPick)
+                                    {
+                                        <FluentIcon Value="@(new Icons.Filled.Size20.Checkmark())" Color="Color.Success" />
+                                    }
+                                    else
+                                    {
+                                        <FluentIcon Value="@(new Icons.Regular.Size20.Square())" Color="Color.Neutral" />
+                                    }
+                                </div>
+                                <div style="font-weight: @textWeight; color: @textColor;">
+                                    @((MarkupString)dapAn.NoiDung)
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (cauHoi.PhanThi == EnumLoaiPhanThi.MenhDeDungSai)
+                {
+                    <div style="margin-left: 80px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #ccc;">
+                                    <th style="padding: 8px;">Mệnh đề</th>
+                                    <th style="padding: 8px; width: 120px; text-align: center;">SV Chọn</th>
+                                    <th style="padding: 8px; width: 120px; text-align: center;">Đáp án</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var md in cauHoi.MenhDes)
+                                {
+                                    var isMdCorrect = (md.LuaChonCuaHocVien == md.LaDung);
+                                    var rowColor = isMdCorrect ? "#107c10" : "#d13438";
+
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 8px;">@((MarkupString)md.NoiDung)</td>
+                                        <td style="padding: 8px; text-align: center; color: @rowColor; font-weight: bold;">
+                                            @(md.LuaChonCuaHocVien.HasValue ? (md.LuaChonCuaHocVien.Value ? "Đúng" : "Sai") : "Bỏ trống")
+                                        </td>
+                                        <td style="padding: 8px; text-align: center; font-weight: bold;">
+                                            @(md.LaDung ? "Đúng" : "Sai")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (cauHoi.PhanThi == EnumLoaiPhanThi.DienKetQua)
+                {
+                    <div style="margin-left: 80px; padding: 10px; background: white; border: 1px solid #ccc; border-radius: 4px;">
+                        <div style="margin-bottom: 5px;">
+                            Sinh viên điền:
+                            <b style="color: @(cauHoi.IsCorrect ? "#107c10" : "#d13438"); font-size: 1.1em;">
+                                @(cauHoi.GiaTriHocVienNhap?.ToString() ?? "[Bỏ trống]")
+                            </b>
+                        </div>
+                        <div style="color: gray; font-size: 0.9em;">
+                            Đáp án đúng: <b>@cauHoi.GiaTriDung</b>
+                            @if (cauHoi.SaiSoChoPhep > 0)
+                            {
+                                <span>(Sai số cho phép: ±@cauHoi.SaiSoChoPhep)</span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(cauHoi.GiaiThich))
+                {
+                    <div style="margin-left: 80px; margin-top: 15px; padding: 10px; background-color: #fff9e6; border-left: 4px solid #fbbc05;">
+                        <b>Giải thích:</b> @((MarkupString)cauHoi.GiaiThich)
+                    </div>
+                }
+
+            </FluentCard>
+        }
+    </div>
+}

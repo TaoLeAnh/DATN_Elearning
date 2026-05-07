@@ -1,0 +1,82 @@
+﻿@page "/nghiep-vu/quan-ly-ky-thi"
+@using Elearning.Shared.Contracts.Portal.Dtos.KyThi
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <h2>Danh sách Kỳ thi</h2>
+
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size20.AddCircle())" OnClick="OpenAddModal" Loading="@IsLoadingSync">Thêm mới kỳ thi</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Nhập tên kỳ thi..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="KyThiDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 25% 15% 20% 10% 10% 15%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+
+        <TemplateColumn Title="Tên kỳ thi" Sortable="true" SortBy="@_roleTenSort">
+            <div style="display:flex; flex-direction:column;">
+                <span @onclick="@(() => OpenDetailsModal(context.Id))" style="cursor: pointer; color: dodgerblue; font-weight: 500;">
+                    @context.TenKyThi
+                </span>
+                @if (context.IsPublic)
+                {
+                    <span style="font-size: 11px; color: #16a34a; font-weight: bold;"><FluentIcon Value="@(new Icons.Regular.Size12.Globe())" Color="Color.Success" /> Công khai (Public)</span>
+                }
+            </div>
+        </TemplateColumn>
+
+        <PropertyColumn Title="Khóa học" Property="@(c => string.IsNullOrEmpty(c.TenKhoaHoc) ? "--- Đề tự do ---" : c.TenKhoaHoc)" Sortable="false" />
+
+        <TemplateColumn Title="Thời gian" Sortable="false">
+            <span style="font-size: 0.9em;">
+                @if (context.ThoiGianBatDau.HasValue && context.ThoiGianKetThuc.HasValue)
+                {
+                    <div>Bắt đầu: <b>@context.ThoiGianBatDau.Value.ToString("dd/MM/yyyy HH:mm")</b></div>
+                    <div>Kết thúc: <b>@context.ThoiGianKetThuc.Value.ToString("dd/MM/yyyy HH:mm")</b></div>
+                }
+                else
+                {
+                    <FluentBadge Appearance="Appearance.Accent">Luôn mở (Không giới hạn)</FluentBadge>
+                }
+            </span>
+        </TemplateColumn>
+
+        <PropertyColumn Title="Thời lượng" Property="@(c => c.ThoiLuongPhut + " phút")" Sortable="true" />
+
+        <TemplateColumn Title="Số câu hỏi" Sortable="false" Align="Align.Center">
+            <FluentBadge Appearance="Appearance.Neutral">@context.SoLuongCauHoi câu</FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thao tác" Align="Align.Start">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Stealth" Title="Cấu hình đề thi" OnClick="@(() => OpenConfigModal(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.DocumentEdit())" Color="Color.Accent" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Stealth" Title="Xem danh sách bài làm" OnClick="@(() => NavManager.NavigateTo($"/nghiep-vu/quan-ly-ky-thi/{context.Id}/bai-lam"))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.PeopleTeam())" Color="Color.Success" />
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline" Title="Chỉnh sửa" OnClick="@(() => EditAction(context.Id))">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Edit())" />
+                </FluentButton>
+
+                <FluentButton Appearance="Appearance.Outline" Title="Xóa" OnClick="() => OpenModalDelete(context.Id)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="Color.Error" />
+                </FluentButton>
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

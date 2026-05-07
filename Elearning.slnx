@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="Elearning.Publising.UI/Elearning.Publising.UI.csproj" Id="61172a53-d9a0-4e4e-9d2f-fa2b1088119b" />
+    <Project Path="src/Elearning.UI/Elearning.UI.csproj" />
+  </Folder>
+  <Folder Name="/src/Elearning.Portal/">
+    <Project Path="src/Elearning.API/Elearning.API.csproj" />
+    <Project Path="src/Elearning.Application/Elearning.Application.csproj" />
+    <Project Path="src/Elearning.Domain/Elearning.Domain.csproj" />
+    <Project Path="src/Elearning.Infrastructure/Elearning.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Elearning.Publising/">
+    <Project Path="Elearning.Publising.API/Elearning.Publising.API.csproj" Id="fb0a9975-fab1-42d2-81c0-c71e827161b8" />
+    <Project Path="Elearning.Publising.Application/Elearning.Publising.Application.csproj" Id="c8c45cd6-67af-4308-a4fd-930d9b511116" />
+    <Project Path="Elearning.Publising.Infrastructure/Elearning.Publising.Infrastructure.csproj" Id="32bceceb-c98f-4b5b-950a-73011c6db6b2" />
+  </Folder>
+  <Folder Name="/src/Elearning.Shared/">
+    <Project Path="src/Elearning.Shared/Elearning.Shared.Commons/Elearning.Shared.Commons.csproj" />
+    <Project Path="src/Elearning.Shared/Elearning.Shared.Contracts/Elearning.Shared.Contracts.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,67 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết Tiến độ học</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="12"><b>Học viên:</b> <div>@Item.TenNguoiDung</div></FluentGridItem>
+            <FluentGridItem md="12"><b>Bài học:</b> <div>@Item.TieuDeBaiHoc</div></FluentGridItem>
+            <FluentGridItem md="6">
+                <b>Hoàn thành:</b>
+                <div>
+                    @if (Item.DaHoanThanh)
+                    {
+                        <FluentBadge Appearance="Appearance.Accent">Đã xong</FluentBadge>
+                    }
+                    else
+                    {
+
+                        <FluentBadge Appearance="Appearance.Neutral">Chưa xong</FluentBadge>
+                    }
+                </div>
+            </FluentGridItem>
+            <FluentGridItem md="6"><b>Thời điểm H.Thành:</b> <div>@(Item.ThoiDiemHoanThanh?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</div></FluentGridItem>
+            <FluentGridItem md="12"><b>Đã xem đến (giây):</b> <div>@Item.LastTimePosition s</div></FluentGridItem>
+        </FluentGrid>
+    }
+    else
+    {
+
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    private TienDoHocDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            // THÊM ApiService Ở ĐÂY
+            var res = await CallService.Get<TienDoHocDto>(new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/TienDoHoc/{Content.Id}", HasAuthorization = true });
+            if (res.Status == StatusCode.OK && res.Data != null) Item = res.Data;
+            IsLoading = false; StateHasChanged();
+        }
+    }
+}

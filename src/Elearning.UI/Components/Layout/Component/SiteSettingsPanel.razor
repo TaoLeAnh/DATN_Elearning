@@ -1,0 +1,78 @@
+﻿@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+@implements IDialogContentComponent
+
+<div>
+    <FluentDesignTheme @ref=_theme
+                       @bind-Mode="@Mode"
+                       @bind-OfficeColor="@OfficeColor"
+                       Direction="@Direction"
+                       StorageName="theme" />
+
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="0">
+        <FluentSelect Label="Chủ đề"
+                      Width="100%"
+                      Style="margin-bottom: 30px;"
+                      Items="@AllModes"
+                      @bind-SelectedOption="@Mode" />
+
+        <FluentSelect Label="Màu sắc"
+                      Style="margin-bottom: 30px;"
+                      Width="100%"
+                      Items="@(OfficeColorUtilities.AllColors.Cast<OfficeColor?>())"
+                      Height="200px"
+                      @bind-SelectedOption="@OfficeColor">
+            <OptionTemplate>
+                <FluentStack>
+                    <FluentIcon Value="@(new Icons.Filled.Size20.RectangleLandscape())"
+                                Color="Color.Custom"
+                                CustomColor="@GetCustomColor(@context)" />
+                    <FluentLabel>@context</FluentLabel>
+                </FluentStack>
+            </OptionTemplate>
+        </FluentSelect>
+
+        <FluentSwitch Label="Hướng"
+                      Style="margin-bottom: 30px;"
+                      CheckedMessage="Trái sang phải"
+                      UncheckedMessage="Phải sang trái"
+                      Value="@_ltr"
+                      ValueChanged="HandleDirectionChanged" />
+        <FluentLabel>
+            Các giá trị này (ngoại trừ Hướng) được lưu trữ trong LocalStorage
+            và sẽ được khôi phục trong các lần truy cập tiếp theo của bạn.<br /><br />
+            Sử dụng nút 'Đặt lại cài đặt' bên dưới để quay về chủ đề hệ thống và màu ngẫu nhiên.
+        </FluentLabel>
+        <FluentDivider Style="width: 100%; margin: 1rem 0" />
+        <FluentPopover Style="width: 350px;" AnchorId="info" FixedPlacement="true" @bind-Open="@_popVisible">
+            <Header>Đặt lại cài đặt trang web</Header>
+            <Body>
+                <p>
+                    Trang web này lưu trữ cài đặt cho chủ đề và màu sắc cũng như các mẫu, emoji và biểu tượng đã tải xuống trong bộ nhớ đệm và bộ nhớ cục bộ của trình duyệt.
+                </p>
+                <p>
+                    Bạn có thể kiểm tra nội dung của bộ nhớ đệm và bộ nhớ trong công cụ phát triển của trình duyệt. Nếu bạn đang sử dụng Edge hoặc Chrome, bạn có thể làm điều này bằng cách
+                    đi tới tab Application và sau đó nhấp vào phần Cache Storage hoặc Local Storage.<br />
+                    Trong Firefox, bạn có thể làm điều này bằng cách đi tới tab Storage và sau đó nhấp vào phần Cache Storage hoặc Local Storage.
+                </p>
+
+                <p>
+                    Nếu bạn cảm thấy như mình không thấy những mẫu, emoji hoặc biểu tượng mới nhất và tuyệt vời nhất, hoặc bạn muốn xóa chủ đề và màu sắc đã lưu,
+                    nhấp vào nút bên dưới để xóa bộ nhớ đệm và xóa bộ nhớ cục bộ.
+                </p>
+                <p>
+                    <strong>Đừng lo lắng, điều này sẽ <strong>chỉ</strong> đặt lại dữ liệu đã lưu cho <strong>trang web này</strong>. Nó sẽ không xóa bất kỳ bộ nhớ đệm nào của trình duyệt cho các trang web khác!</strong>
+                </p>
+            </Body>
+        </FluentPopover>
+
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentButton OnClick="@ResetSiteAsync">Đặt lại cài đặt</FluentButton>
+            <FluentIcon Id="info" Value="@(new Icons.Regular.Size24.Info())" OnClick="@(() => _popVisible = !_popVisible)" />
+        </FluentStack>
+
+        <p style="margin-top: 1rem;">
+            <em><strong>@_status</strong></em>
+        </p>
+    </FluentStack>
+</div>

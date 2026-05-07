@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elearning.Domain\Elearning.Domain.csproj" />
+    <ProjectReference Include="..\Elearning.Infrastructure\Elearning.Infrastructure.csproj" />
+    <ProjectReference Include="..\Elearning.Shared\Elearning.Shared.Commons\Elearning.Shared.Commons.csproj" />
+    <ProjectReference Include="..\Elearning.Shared\Elearning.Shared.Contracts\Elearning.Shared.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

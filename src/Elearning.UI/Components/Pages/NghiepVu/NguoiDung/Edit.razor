@@ -1,0 +1,204 @@
+﻿@using Elearning.Shared.Commons.Enums
+@using Elearning.Shared.Commons.Extensions
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.Shared.Contracts.Portal.Forms
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+@if (!IsLoading)
+{
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" />
+            <FluentLabel Typo="Typography.PaneHeader">@Dialog.Instance.Parameters.Title</FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        <EditForm Model="@ModelForm" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <FluentGrid Spacing="2" Style="padding:4px;">
+
+                <FluentGridItem md="6">
+                    <FluentTextField @bind-Value="ModelForm.Ten" Style="width: 100%;" Placeholder="Nhập họ tên">
+                        <LabelTemplate>Họ và tên (@RedStar)</LabelTemplate>
+                    </FluentTextField>
+                    <ValidationMessage For="@(() => ModelForm.Ten)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentTextField @bind-Value="ModelForm.Email" TextFieldType="TextFieldType.Email" Style="width: 100%;" Placeholder="Nhập email">
+                        <LabelTemplate>Email (@RedStar)</LabelTemplate>
+                    </FluentTextField>
+                    <ValidationMessage For="@(() => ModelForm.Email)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentTextField @bind-Value="ModelForm.MatKhau" TextFieldType="TextFieldType.Password" Style="width: 100%;"
+                                     Placeholder="@(Content.IsEditMode ? "Bỏ trống nếu không đổi" : "Nhập mật khẩu")">
+                        <LabelTemplate>
+                            Mật khẩu @(Content.IsEditMode ? (MarkupString)"" : RedStar)
+                        </LabelTemplate>
+                    </FluentTextField>
+                    <ValidationMessage For="@(() => ModelForm.MatKhau)" Style="color:red;" />
+                </FluentGridItem>
+
+                <FluentGridItem md="6">
+                    <FluentAutocomplete TOption="RoleOption"
+                                        ImmediateDelay="250"
+                                        AutoComplete="off"
+                                        OnOptionsSearch="OnSearchRole"
+                                        SelectedOptionChanged="OnSelectedRoleChanged"
+                                        Placeholder="Chọn vai trò"
+                                        Multiple="false"
+                                        Position="SelectPosition.Below"
+                                        OptionText="@(item => item.Text)"
+                                        SelectedOption="SelectedRole"
+                                        Style="width: 100%;">
+                        <LabelTemplate>Vai trò (@RedStar)</LabelTemplate>
+                    </FluentAutocomplete>
+                    <ValidationMessage For="@(() => ModelForm.VaiTro)" Style="color:red;" />
+                </FluentGridItem>
+
+            </FluentGrid>
+
+            <FluentDialogFooter>
+                <FluentButton Appearance="Appearance.Neutral" OnClick="CancelAsync" Disabled="@IsSaving">Hủy</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu</FluentButton>
+            </FluentDialogFooter>
+        </EditForm>
+    </FluentDialogBody>
+}
+else
+{
+    <FluentDialogBody><FluentProgressRing /></FluentDialogBody>
+}
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private NguoiDungForm ModelForm = new();
+
+    // MarkupString giúp render HTML trực tiếp mà không bị lỗi text namespace
+    private MarkupString RedStar => new MarkupString("<span style='color:red;'>*</span>");
+
+    public class RoleOption
+    {
+        public EnumVaiTro Value { get; set; }
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private List<RoleOption> AllRoles = Enum.GetValues(typeof(EnumVaiTro))
+        .Cast<EnumVaiTro>()
+        .Select(v => new RoleOption
+        {
+            Value = v,
+            Text = v.GetDescription()
+        }).ToList();
+
+    public RoleOption? SelectedRole { get; set; }
+
+    private void OnSearchRole(OptionsSearchEventArgs<RoleOption> e)
+    {
+        var keyword = e.Text?.ToLower() ?? "";
+        e.Items = AllRoles.Where(x => x.Text.ToLower().Contains(keyword)).ToList();
+    }
+
+    public void OnSelectedRoleChanged(RoleOption? selected)
+    {
+        SelectedRole = selected;
+        if (selected != null)
+        {
+            ModelForm.VaiTro = selected.Value;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            if (Content.IsEditMode && Content.Id != Guid.Empty)
+            {
+                var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/NguoiDung/{Content.Id}", HasAuthorization = true };
+                var res = await CallService.Get<NguoiDungDto>(req);
+                if (res.Status == StatusCode.OK && res.Data != null)
+                {
+                    ModelForm.Ten = res.Data.Ten;
+                    ModelForm.Email = res.Data.Email;
+                    ModelForm.VaiTro = res.Data.VaiTro;
+                    SelectedRole = AllRoles.FirstOrDefault(x => x.Value == res.Data.VaiTro);
+                }
+            }
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (SelectedRole == null)
+        {
+            ToastService.ShowWarning("Vui lòng chọn vai trò.");
+            return;
+        }
+
+        if (!Content.IsEditMode && string.IsNullOrWhiteSpace(ModelForm.MatKhau))
+        {
+            ToastService.ShowWarning("Vui lòng nhập mật khẩu.");
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = Content.IsEditMode ? $"/NguoiDung/{Content.Id}" : "/NguoiDung",
+                HasAuthorization = true
+            };
+
+            bool isSuccess = false;
+            string? errorMessage = string.Empty;
+
+            if (Content.IsEditMode)
+            {
+                var result = await CallService.Put(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+            else
+            {
+                var result = await CallService.Post<Guid>(req, ModelForm);
+                isSuccess = result.Status == StatusCode.OK;
+                errorMessage = result.Message;
+            }
+
+            if (isSuccess)
+            {
+                ToastService.ShowSuccess("Lưu thành công!");
+                await Dialog.CloseAsync();
+                await Content.OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowWarning(errorMessage ?? "Lỗi khi lưu");
+            }
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

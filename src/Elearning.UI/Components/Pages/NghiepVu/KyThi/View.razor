@@ -1,0 +1,99 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos.KyThi
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết kỳ thi</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <FluentGrid Spacing="3">
+            <FluentGridItem md="12"><b>Tên kỳ thi:</b> <div>@Item.TenKyThi</div></FluentGridItem>
+
+            <FluentGridItem md="12">
+                <b>Trạng thái đề:</b>
+                <div style="margin-top: 4px;">
+                    @if (Item.IsPublic)
+                    {
+                        <FluentBadge Fill="success" Color="white">Đề công khai (Public)</FluentBadge>
+                    }
+                    else
+                    {
+                        <FluentBadge Fill="neutral">Đề thi nội bộ</FluentBadge>
+                    }
+                </div>
+            </FluentGridItem>
+
+            @if (Item.IsPublic)
+            {
+                <FluentGridItem md="6"><b>Môn học:</b> <div>@(Item.MonHoc.HasValue? Item.MonHoc.ToString() : "N/A")</div></FluentGridItem>
+                <FluentGridItem md="6"><b>Loại đề thi:</b> <div>@(Item.LoaiDeThi.HasValue? Item.LoaiDeThi.ToString() : "N/A")</div></FluentGridItem>
+                <FluentGridItem md="6"><b>Năm thi:</b> <div>@Item.NamThi</div></FluentGridItem>
+                <FluentGridItem md="6"><b>Tỉnh/Thành phố:</b> <div>@Item.TinhThanh</div></FluentGridItem>
+                <FluentGridItem md="12"><b>Tên trường:</b> <div>@Item.TenTruong</div></FluentGridItem>
+            }
+            else
+            {
+                <FluentGridItem md="12"><b>Thuộc khóa học:</b> <div>@(string.IsNullOrEmpty(Item.TenKhoaHoc) ? "Không có" : Item.TenKhoaHoc)</div></FluentGridItem>
+                <FluentGridItem md="6"><b>Thời gian bắt đầu:</b> <div>@(Item.ThoiGianBatDau.HasValue ? Item.ThoiGianBatDau.Value.ToString("dd/MM/yyyy HH:mm") : "N/A")</div></FluentGridItem>
+                <FluentGridItem md="6"><b>Thời gian kết thúc:</b> <div>@(Item.ThoiGianKetThuc.HasValue ? Item.ThoiGianKetThuc.Value.ToString("dd/MM/yyyy HH:mm") : "N/A")</div></FluentGridItem>
+            }
+
+            <FluentGridItem md="6"><b>Thời lượng:</b> <div>@Item.ThoiLuongPhut phút</div></FluentGridItem>
+
+            @if (Item.SoLuongCauHoi > 0)
+            {
+                <FluentGridItem md="6"><b>Số lượng câu hỏi đã gán:</b> <div>@Item.SoLuongCauHoi câu</div></FluentGridItem>
+            }
+        </FluentGrid>
+    }
+    else
+    {
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    private KyThiDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/KyThi/{Content.Id}",
+                HasAuthorization = true
+            };
+
+            var res = await CallService.Get<KyThiDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                Item = res.Data;
+            }
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

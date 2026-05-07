@@ -1,0 +1,115 @@
+﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.UI.Application.Dtos
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+
+@implements IDialogContentComponent<EditOrUpdateParametersDto>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+        <FluentLabel Typo="Typography.PaneHeader">Chi tiết Bộ câu hỏi</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (!IsLoading)
+    {
+        <div style="margin-bottom: 20px;">
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="10">
+                <h3 style="margin: 0; color: #0078d4;">@Item.TenBo</h3>
+                <FluentBadge Appearance="Appearance.Accent">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Clock())" Slot="start" Color="Color.Lightweight" />
+                    @Item.ThoiLuongPhut phút
+                </FluentBadge>
+            </FluentStack>
+            <p style="color: gray; margin-top: 5px;">Mô tả: @Item.MoTa</p>
+        </div>
+
+        <div style="border-top: 1px solid #e0e0e0; padding-top: 15px; padding-bottom: 15px;">
+            <FluentLabel Weight="FontWeight.Bold" Style="margin-bottom: 8px; display: block;">Phân bổ khóa học:</FluentLabel>
+            @if (!string.IsNullOrEmpty(Item.TenKhoaHoc))
+            {
+                <FluentBreadcrumb>
+                    <FluentBreadcrumbItem>
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Book())" Slot="start" />
+                        @Item.TenKhoaHoc
+                    </FluentBreadcrumbItem>
+
+                    @if (!string.IsNullOrEmpty(Item.TenChuongHoc))
+                    {
+                        <FluentBreadcrumbItem>@Item.TenChuongHoc</FluentBreadcrumbItem>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Item.TenBaiHoc))
+                    {
+                        <FluentBreadcrumbItem>
+                            <span style="color: #0078d4; font-weight: 500;">@Item.TenBaiHoc</span>
+                        </FluentBreadcrumbItem>
+                    }
+                </FluentBreadcrumb>
+            }
+            else
+            {
+                <span style="color: #ccc; font-style: italic;">Bộ câu hỏi tự do (Không thuộc khóa học nào)</span>
+            }
+        </div>
+
+        <div style="border-top: 1px solid #e0e0e0; padding-top: 15px;">
+            <FluentLabel Weight="FontWeight.Bold" Style="margin-bottom: 10px; display: block;">Danh sách câu hỏi (@Item.ChiTietBoCauHois.Count câu)</FluentLabel>
+
+            <div style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                @foreach (var c in Item.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                {
+                    <div style="background: #f9f9f9; padding: 12px; margin-bottom: 8px; border-radius: 6px; display: flex;">
+                        <strong style="width: 55px; color: #0078d4;">Câu @c.ThuTu:</strong>
+                        <div style="flex-grow: 1; font-size: 0.95em;">
+                            @((MarkupString)(string.IsNullOrEmpty(c.NoiDungCauHoi) ? "<i>[Nội dung rỗng/Ảnh]</i>" : c.NoiDungCauHoi))
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()">Đóng</FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public EditOrUpdateParametersDto Content { get; set; } = new();
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+
+    private BoCauHoiOnTapDto Item = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstLoad)
+    {
+        if (firstLoad)
+        {
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/BoCauHoiOnTap/{Content.Id}",
+                HasAuthorization = true
+            };
+
+            var res = await CallService.Get<BoCauHoiOnTapDto>(req);
+
+            if (res.Status == StatusCode.OK && res.Data != null)
+            {
+                Item = res.Data;
+            }
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

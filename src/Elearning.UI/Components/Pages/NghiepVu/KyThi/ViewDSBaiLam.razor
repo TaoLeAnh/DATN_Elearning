@@ -1,0 +1,105 @@
+﻿@page "/nghiep-vu/quan-ly-ky-thi/{KyThiId:guid}/bai-lam"
+
+@using Elearning.Shared.Contracts.Portal.Dtos.KyThi
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Elearning.UI.Shared
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-bottom: 20px;">
+    <FluentButton Appearance="Appearance.Stealth" IconStart="@(new Icons.Regular.Size24.ArrowLeft())" OnClick="GoBack">Quay lại Kỳ thi</FluentButton>
+    <h2>Kết quả thi & Bài làm sinh viên</h2>
+</FluentStack>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between">
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Outline" IconStart="@(new Icons.Regular.Size20.DocumentArrowDown())">Xuất bảng điểm</FluentButton>
+        </FluentStack>
+
+        <FluentSearch style="width:300px" Placeholder="Tìm mã hoặc tên sinh viên..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
+    </FluentStack>
+
+    <FluentDataGrid ShowHover="true" 
+                    @ref="Grid" 
+                    TGridItem="BaiLamDto" 
+                    ItemsProvider="LoadDatas" 
+                    GridTemplateColumns="5% 20% 30% 15% 15% 15%" 
+                    RowSize="DataGridRowSize.Large" 
+                    Style="width:100%;" 
+                    Pagination="@pagination">
+
+        <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
+        
+        <PropertyColumn Title="Họ và Tên" Property="@(c => c.TenSinhVien)" Sortable="true" SortBy="@_roleTenSVSort" />
+
+        <TemplateColumn Title="Thời gian thi" Sortable="false">
+            <div style="font-size: 0.85em;">
+                <div>Vào: <b>@context.ThoiDiemBatDau.ToString("dd/MM/yyyy HH:mm")</b></div>
+                @if (context.ThoiDiemNop.HasValue)
+                {
+                    <div>Nộp: <b style="color: #107c10;">@context.ThoiDiemNop.Value.ToString("dd/MM/yyyy HH:mm")</b></div>
+                }
+                else
+                {
+                    <div style="color: gray; font-style: italic;">Chưa nộp bài</div>
+                }
+            </div>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Điểm số" Sortable="true">
+            @if (context.TrangThai == EnumTrangThaiBaiLam.DaCham)
+            {
+                <div style="font-weight: bold; font-size: 1.1em; color: #0078d4;">
+                    @context.Diem.ToString("0.##") <span style="font-size: 0.8em; font-weight: normal; color: gray;">(@context.SoCauDung đúng)</span>
+                </div>
+            }
+            else
+            {
+                <span style="color: gray;">-</span>
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Trạng thái" Sortable="false" Align="Align.Center">
+            @{
+                var badgeAppearance = context.TrangThai switch
+                {
+                    EnumTrangThaiBaiLam.DangLam => Appearance.Lightweight,
+                    EnumTrangThaiBaiLam.DaCham => Appearance.Accent,
+                    EnumTrangThaiBaiLam.Huy => Appearance.Lightweight,
+                    _ => Appearance.Neutral
+                };
+            }
+            <FluentBadge Appearance="@badgeAppearance">@context.TrangThai.GetDescription()</FluentBadge>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Vi phạm" Sortable="true" Align="Align.Center">
+            @if (context.TongSoLanViPham > 0)
+            {
+                <FluentBadge Appearance="Appearance.Lightweight" Style="color: red; border-color: red; font-weight: bold;">
+                    @context.TongSoLanViPham lần
+                </FluentBadge>
+            }
+            else
+            {
+                <span style="color: lightgray;">0</span>
+            }
+        </TemplateColumn>
+
+        <TemplateColumn Title="Thao tác" Align="Align.End">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+                <FluentButton Appearance="Appearance.Stealth" Title="Xem chi tiết bài làm" OnClick="@(() => ViewReview(context.Id))" Disabled="@(context.TrangThai == EnumTrangThaiBaiLam.DangLam)">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Eye())" Color="Color.Accent" />
+                </FluentButton>
+
+                @if (context.TongSoLanViPham > 0)
+                {
+                    <FluentButton Appearance="Appearance.Stealth" Title="Xem lịch sử vi phạm">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.ShieldError())" Color="Color.Error" />
+                    </FluentButton>
+                }
+            </FluentStack>
+        </TemplateColumn>
+    </FluentDataGrid>
+    <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
+</FluentStack>

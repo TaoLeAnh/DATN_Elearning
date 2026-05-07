@@ -1,0 +1,296 @@
+﻿@using Elearning.Shared.Contracts.AIM.Dtos
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IConfiguration configuration
+@inject HttpClient Http
+
+<style>
+    .ip-card {
+        display: grid;
+        gap: .75rem;
+    }
+
+        .ip-card .ip-img-wrap {
+            border: 1px dashed #e2e2e2;
+            border-radius: 12px;
+            padding: 8px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ip-card .ip-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .ip-card .ip-img-placeholder {
+            color: #888;
+            font-size: .9rem;
+        }
+
+        .ip-card .ip-actions {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+    .ip-multi-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+        min-height: 120px;
+        border: 1px dashed #e2e2e2;
+        border-radius: 12px;
+        align-items: flex-start;
+    }
+
+    .ip-multi-item {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e2e2;
+    }
+
+        .ip-multi-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .ip-multi-item .ip-remove-btn {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+            transition: background .15s;
+        }
+
+            .ip-multi-item .ip-remove-btn:hover {
+                background: rgba(200,0,0,0.8);
+            }
+</style>
+
+<div class="ip-card">
+    @if (Multiple)
+    {
+        <div class="ip-multi-grid">
+            @if (CurrentItems.Count == 0)
+            {
+                <div class="ip-img-placeholder">Chưa chọn ảnh</div>
+            }
+            else
+            {
+                @foreach (var (item, index) in CurrentItems.Select((it, i) => (it, i)))
+                {
+                    <div class="ip-multi-item">
+                        <img src="@item.Url" alt="image-@index" />
+                        <button class="ip-remove-btn" title="Xóa ảnh này" @onclick="() => RemoveImageAt(index)">✕</button>
+                    </div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        <div class="ip-img-wrap">
+            @if (string.IsNullOrWhiteSpace(CurrentUrl))
+            {
+                <div class="ip-img-placeholder">Chưa chọn ảnh</div>
+            }
+            else
+            {
+                <img src="@CurrentUrl" alt="@Alt" class="ip-img" />
+            }
+        </div>
+    }
+
+    <div class="ip-actions">
+        <FluentInputFile Id="@_fileInputId"
+                         Mode="InputFileMode.Stream"
+                         Multiple="@Multiple"
+                         Accept="image/*"
+                         MaximumFileSize="@(10 * 1024 * 1024)"
+                         AnchorId="@_btnUploadId"
+                         OnCompleted="@OnFilesUploadCompletedAsync"
+                         Style="display: none;" />
+
+        <FluentButton Id="@_btnUploadId" Appearance="Appearance.Accent" Disabled="Disabled"
+                      IconStart="@(new Icons.Regular.Size20.ArrowUpload())">
+            Chọn ảnh từ máy
+        </FluentButton>
+
+        @if (!Multiple)
+        {
+            <FluentButton Appearance="Appearance.Outline"
+                          Disabled="Disabled || string.IsNullOrWhiteSpace(CurrentUrl)"
+                          OnClick="ClearAsync"
+                          IconStart="@(new Icons.Regular.Size20.Delete())">
+                Xóa
+            </FluentButton>
+        }
+        else
+        {
+            <FluentButton Appearance="Appearance.Outline"
+                          Disabled="Disabled || CurrentItems.Count == 0"
+                          OnClick="ClearAllAsync"
+                          IconStart="@(new Icons.Regular.Size20.Delete())">
+                Xóa tất cả
+            </FluentButton>
+        }
+    </div>
+</div>
+
+@code {
+    private string _fileInputId = "file-" + Guid.NewGuid().ToString("N");
+    private string _btnUploadId = "btn-" + Guid.NewGuid().ToString("N");
+
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public List<ImageItemDto>? ImageUrls { get; set; }
+    [Parameter] public string? Alt { get; set; } = "image preview";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Multiple { get; set; } = false;
+
+    // Callbacks
+    [Parameter] public EventCallback<string> OnChange { get; set; }
+    [Parameter] public EventCallback<List<ImageItemDto>> OnChangeMultiple { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+
+    private string? CurrentUrl;
+    private List<ImageItemDto> CurrentItems { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        if (CurrentUrl != ImageUrl)
+            CurrentUrl = ImageUrl;
+
+        if (Multiple && ImageUrls is not null && CurrentItems.Count == 0)
+            CurrentItems = new List<ImageItemDto>(ImageUrls);
+    }
+
+    private async Task OnFilesUploadCompletedAsync(IEnumerable<FluentInputFileEventArgs> files)
+    {
+        if (files == null || !files.Any()) return;
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if (file.Stream == null) continue;
+
+                using var content = new MultipartFormDataContent();
+                var streamContent = new StreamContent(file.Stream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType ?? "image/jpeg");
+                content.Add(streamContent, "file", file.Name);
+
+                // LƯU Ý QUAN TRỌNG:
+                // Bạn hãy kiểm tra lại xem API của bạn đang chạy ở cổng 5203 hay cổng nào khác,
+                // Hãy thay thế http://localhost:5203 bằng đúng cổng của Elearning.API nhé!
+                var apiUrl = "http://localhost:5203/api/File/upload";
+
+                // 1. Lấy Token của người dùng đang đăng nhập
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                var token = authState.User.FindFirst("AccessToken")?.Value;
+
+                // 2. Tạo một Request mới và nhét Token vào Header
+                var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+                if (!string.IsNullOrEmpty(token))
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
+                request.Content = content; // Nhét cái file ảnh vào
+
+                // 3. Bắn Request đi
+                var response = await Http.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var resultJson = await response.Content.ReadFromJsonAsync<UploadResponseDto>();
+
+                    if (resultJson != null && !string.IsNullOrEmpty(resultJson.Url))
+                    {
+                        if (Multiple)
+                        {
+                            if (!CurrentItems.Any(x => x.Url == resultJson.Url))
+                            {
+                                CurrentItems.Add(new ImageItemDto { Url = resultJson.Url });
+                            }
+                            await OnChangeMultiple.InvokeAsync(new List<ImageItemDto>(CurrentItems));
+                        }
+                        else
+                        {
+                            CurrentUrl = ImageUrl = resultJson.Url;
+                            await OnChange.InvokeAsync(resultJson.Url);
+                        }
+                        ToastService.ShowSuccess($"Đã tải lên {file.Name} thành công!");
+                    }
+                }
+                else
+                {
+                    ToastService.ShowError($"Lỗi khi tải file {file.Name}: HTTP {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Lỗi bất ngờ khi tải {file.Name}: {ex.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveImageAt(int index)
+    {
+        if (index < 0 || index >= CurrentItems.Count) return;
+        CurrentItems.RemoveAt(index);
+        await OnChangeMultiple.InvokeAsync(new List<ImageItemDto>(CurrentItems));
+        StateHasChanged();
+    }
+
+    private async Task ClearAllAsync()
+    {
+        if (Disabled) return;
+        CurrentItems.Clear();
+        await OnClear.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task ClearAsync()
+    {
+        if (Disabled) return;
+        CurrentUrl = null;
+        await OnClear.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private class UploadResponseDto
+    {
+        public string Url { get; set; } = string.Empty;
+    }
+}
