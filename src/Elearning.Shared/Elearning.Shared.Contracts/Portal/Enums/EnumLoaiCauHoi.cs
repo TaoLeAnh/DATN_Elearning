@@ -7,13 +7,13 @@ namespace Elearning.Shared.Contracts.Portal.Enums
 {
     public enum EnumLoaiCauHoi
     {
-        [Description("Một lựa chọn (Radio)")]
+        [Description("Trắc nghiệm (Một lựa chọn)")]
         MotLuaChon = 1,
 
-        [Description("Nhiều lựa chọn (Checkbox)")]
-        NhieuLuaChon = 2,
+        [Description("Mệnh đề (Đúng/Sai)")]
+        MenhDeDungSai = 2,
 
-        [Description("Tự luận / Điền khuyết")]
-        TuLuan = 3
+        [Description("Điền kết quả (Đáp án ngắn)")]
+        DienKetQua = 3
     }
 }

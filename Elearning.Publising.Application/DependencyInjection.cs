@@ -26,8 +26,10 @@ namespace Elearning.Publising.Application
             services.AddScoped<IBaiLamService, BaiLamService>();
             services.AddScoped<IHoSoGiaoVienService, HoSoGiaoVienService>();
             services.AddScoped<IDangKyKhoaHocService, DangKyKhoaHocService>();
+            services.AddScoped<IChatbotService, ChatBotService>();
             services.AddSingleton<IExamQueueService, ExamQueueService>();
             services.AddHostedService<ExamScoringBackgroundWorker>();
+
         }
     }
 }

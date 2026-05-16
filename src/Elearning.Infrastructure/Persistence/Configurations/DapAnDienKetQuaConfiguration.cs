@@ -16,8 +16,9 @@ namespace Elearning.Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
 
             builder.HasOne(x => x.CauHoi)
-                .WithMany()
-                .HasForeignKey(x => x.CauHoiId);
+                .WithMany(x => x.DapAnDienKetQuas)
+                .HasForeignKey(x => x.CauHoiId)
+                .OnDelete(DeleteBehavior.Cascade); 
         }
     }
 }

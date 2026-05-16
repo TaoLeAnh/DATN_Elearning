@@ -29,5 +29,8 @@ namespace Elearning.Domain.Interfaces
         public IHoSoGiaoVienRepository HoSoGiaoVienRepository { get; }
 
         public IDangKyKhoaHocRepository DangKyKhoaHocRepository { get; }
+
+        public IChiTietBaiLamRepository ChiTietBaiLamRepository { get; }
+        public IBaiHocRepository BaiHocRepository { get; }
     }
 }

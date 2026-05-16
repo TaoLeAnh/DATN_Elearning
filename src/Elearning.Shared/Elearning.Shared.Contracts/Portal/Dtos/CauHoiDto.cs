@@ -31,5 +31,22 @@ namespace Elearning.Shared.Contracts.Portal.Dtos
 
         // Danh sách đáp án đi kèm câu hỏi này (dùng khi xem chi tiết)
         public List<DapAnDto> DapAns { get; set; } = new List<DapAnDto>();
+        public List<MenhDeDungSaiDto> MenhDeDungSais { get; set; } = new();
+        public List<DapAnDienKetQuaDto> DapAnDienKetQuas { get; set; } = new();
+    }
+    public class MenhDeDungSaiDto
+    {
+        public Guid Id { get; set; }
+        public string? HinhAnhUrl { get; set; }
+        public string NoiDung { get; set; }
+        public bool LaDung { get; set; }
+        public int ThuTu { get; set; }
+    }
+
+    public class DapAnDienKetQuaDto
+    {
+        public Guid Id { get; set; }
+        public float GiaTriDung { get; set; }
+        public float SaiSoChoPhep { get; set; }
     }
 }

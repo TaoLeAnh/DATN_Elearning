@@ -22,11 +22,10 @@
     <EditForm Model="@ModelForm" OnValidSubmit="Save">
         <DataAnnotationsValidator />
 
-        <FluentGrid Spacing="3">
-            @* CỘT TRÁI: THÔNG TIN CÂU HỎI *@
-            <FluentGridItem md="6">
-                <FluentCard Style="height: 100%; padding: 20px;">
-                    <h3>Thông tin chung</h3>
+        <FluentTabs>
+            @* TAB 1: THÔNG TIN CÂU HỎI *@
+            <FluentTab Id="tab-thong-tin" Label="Thông tin chung" Icon="@(new Icons.Regular.Size20.DocumentEdit())">
+                <div style="padding: 20px 0;">
                     <FluentGrid Spacing="2">
                         <FluentGridItem md="6">
                             <FluentSelect Label="Loại câu hỏi" TOption="string" Value="@ModelForm.LoaiCauHoi.ToString()" ValueChanged="@(v => ModelForm.LoaiCauHoi = Enum.Parse<EnumLoaiCauHoi>(v))" Style="width: 100%;">
@@ -74,6 +73,7 @@
                             </FluentSelect>
                             <ValidationMessage For="@(() => ModelForm.KhoaHocId)" Style="color:red;" />
                         </FluentGridItem>
+
                         <FluentGridItem md="12">
                             <FluentTextField @bind-Value="ModelForm.ChuDe" Label="Chủ đề (*)" Style="width: 100%;" />
                             <ValidationMessage For="@(() => ModelForm.ChuDe)" Style="color:red;" />
@@ -89,7 +89,8 @@
                         <FluentGridItem md="12">
                             @if (QuestionInputType == "Text")
                             {
-                                <SITextEditor Label="Nội dung câu hỏi"
+                                <SITextEditor @key="@("editor_main_question")"
+                                              Label="Nội dung câu hỏi"
                                               Input="@ModelForm.NoiDung"
                                               OnChange="@((string val) => ModelForm.NoiDung = val)" />
                             }
@@ -106,65 +107,145 @@
                         </FluentGridItem>
 
                         <FluentGridItem md="12">
-                            <SITextEditor Label="Giải thích đáp án (Hiện sau khi nộp bài)"
+                            <SITextEditor @key="@("editor_main_explain")"
+                                          Label="Giải thích đáp án (Hiện sau khi nộp bài)"
                                           Input="@ModelForm.GiaiThich"
                                           OnChange="@((string val) => ModelForm.GiaiThich = val)" />
                         </FluentGridItem>
                     </FluentGrid>
-                </FluentCard>
-            </FluentGridItem>
+                </div>
+            </FluentTab>
 
-            @* CỘT PHẢI: QUẢN LÝ ĐÁP ÁN *@
-            <FluentGridItem md="6">
-                <FluentCard Style="height: 100%; padding: 20px;">
-                    <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between; margin-bottom: 15px;">
-                        <h3>Danh sách Đáp án</h3>
-                        <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddDapAn">Thêm đáp án</FluentButton>
-                    </FluentStack>
+            @* TAB 2: QUẢN LÝ ĐÁP ÁN *@
+            <FluentTab Id="tab-dap-an" Label="Cấu hình Đáp án" Icon="@(new Icons.Regular.Size20.CheckmarkSquare())">
+                <div style="padding: 20px 0;">
 
-                    @for (int i = 0; i < ModelForm.DapAns.Count; i++)
+                    @if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.MotLuaChon)
                     {
-                        var index = i;
-                        var dapAn = ModelForm.DapAns[index];
+                        @* LOẠI 1: TRẮC NGHIỆM MỘT LỰA CHỌN *@
+                        <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">Các lựa chọn đáp án (A, B, C, D)</h3>
+                            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddDapAn">Thêm đáp án</FluentButton>
+                        </FluentStack>
 
-                        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative;">
-                            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Top">
-                                <div style="font-weight: bold; width: 30px; margin-top: 10px;">@( (char)('A' + index) ).</div>
+                        @for (int i = 0; i < ModelForm.DapAns.Count; i++)
+                        {
+                            var index = i;
+                            var dapAn = ModelForm.DapAns[index];
 
-                                <FluentSelect @bind-Value="DapAnInputTypes[index]" TOption="string" Style="width: 120px; margin-top: 10px;">
-                                    <FluentOption Value="Text">Văn bản</FluentOption>
-                                    <FluentOption Value="Image">Hình ảnh</FluentOption>
-                                </FluentSelect>
+                            <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Top">
+                                    <div style="font-weight: bold; width: 30px; margin-top: 10px;">@((char)('A' + index)).</div>
+                                    <FluentSelect @bind-Value="DapAnInputTypes[index]" TOption="string" Style="width: 120px; margin-top: 10px;">
+                                        <FluentOption Value="Text">Văn bản</FluentOption>
+                                        <FluentOption Value="Image">Hình ảnh</FluentOption>
+                                    </FluentSelect>
 
-                                <div style="flex-grow: 1;">
-                                    @if (DapAnInputTypes[index] == "Text")
-                                    {
-                                        <SITextEditor Input="@dapAn.NoiDung"
-                                                      OnChange="@((string val) => dapAn.NoiDung = val)" />
-                                    }
-                                    else
-                                    {
-                                        <div style="margin-top: 10px;">
-                                            <ImagePicker ImageUrl="@dapAn.HinhAnhUrl"
-                                                         Multiple="false"
-                                                         OnChange="@((string url) => dapAn.HinhAnhUrl = url)"
-                                                         OnClear="@(() => dapAn.HinhAnhUrl = string.Empty)" />
-                                        </div>
-                                    }
+                                    <div style="flex-grow: 1;">
+                                        @if (DapAnInputTypes[index] == "Text")
+                                        {
+                                            <SITextEditor @key="@dapAn"
+                                                          Input="@dapAn.NoiDung"
+                                                          OnChange="@((string val) => dapAn.NoiDung = val)" />
+                                        }
+                                        else
+                                        {
+                                            <div style="margin-top: 10px;">
+                                                <ImagePicker ImageUrl="@dapAn.HinhAnhUrl"
+                                                             Multiple="false"
+                                                             OnChange="@((string url) => dapAn.HinhAnhUrl = url)"
+                                                             OnClear="@(() => dapAn.HinhAnhUrl = string.Empty)" />
+                                            </div>
+                                        }
+                                    </div>
+                                </FluentStack>
+
+                                <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px;">
+                                    <FluentCheckbox @bind-Value="dapAn.LaDapAnDung" Label="Là đáp án đúng" Style="margin-right: 15px; color: green;" />
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => RemoveDapAn(dapAn))" Style="color:red;" />
                                 </div>
-                            </FluentStack>
-
-                            <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px;">
-                                <FluentCheckbox @bind-Value="dapAn.LaDapAnDung" Label="Là đáp án đúng" Style="margin-right: 15px; color: green;" />
-                                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => RemoveDapAn(dapAn))" Style="color:red;" />
                             </div>
-                        </div>
+                        }
                     }
-                </FluentCard>
-            </FluentGridItem>
-        </FluentGrid>
+                    else if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.MenhDeDungSai)
+                    {
+                        @* LOẠI 2: MỆNH ĐỀ ĐÚNG SAI *@
+                        <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">Các mệnh đề (Chọn Đúng/Sai)</h3>
+                            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddMenhDe">Thêm mệnh đề</FluentButton>
+                        </FluentStack>
 
-        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="margin-top: 20px;">
+                        <div style="background-color: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em; color: #856404;">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Info())" /> Thường một câu hỏi dạng này sẽ có 4 mệnh đề a, b, c, d. Bạn có thể chèn biểu thức toán học. Nhớ tích chọn mệnh đề nào ĐÚNG.
+                        </div>
+
+                        @for (int i = 0; i < ModelForm.MenhDeDungSais.Count; i++)
+                        {
+                            var index = i;
+                            var menhDe = ModelForm.MenhDeDungSais[index];
+
+                            <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10" VerticalAlignment="VerticalAlignment.Top">
+                                    <div style="font-weight: bold; width: 30px; margin-top: 10px;">@((char)('a' + index)).</div>
+
+                                    <FluentSelect @bind-Value="MenhDeInputTypes[index]" TOption="string" Style="width: 120px; margin-top: 10px;">
+                                        <FluentOption Value="Text">Văn bản</FluentOption>
+                                        <FluentOption Value="Image">Hình ảnh</FluentOption>
+                                    </FluentSelect>
+
+                                    <div style="flex-grow: 1;">
+                                        @if (MenhDeInputTypes[index] == "Text")
+                                        {
+                                            <SITextEditor @key="@menhDe"
+                                                          Input="@menhDe.NoiDung"
+                                                          OnChange="@((string val) => menhDe.NoiDung = val)" />
+                                        }
+                                        else
+                                        {
+                                            <div style="margin-top: 10px;">
+                                                <ImagePicker ImageUrl="@menhDe.HinhAnhUrl"
+                                                             Multiple="false"
+                                                             OnChange="@((string url) => menhDe.HinhAnhUrl = url)"
+                                                             OnClear="@(() => menhDe.HinhAnhUrl = string.Empty)" />
+                                            </div>
+                                        }
+                                    </div>
+                                </FluentStack>
+
+                                <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px;">
+                                    <FluentSwitch @bind-Value="menhDe.LaDung" Label="@(menhDe.LaDung ? "Mệnh đề ĐÚNG" : "Mệnh đề SAI")" Style="margin-right: 15px;" />
+                                    <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => RemoveMenhDe(menhDe))" Style="color:red;" />
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.DienKetQua)
+                    {
+                        @* LOẠI 3: ĐIỀN KẾT QUẢ *@
+                        <FluentStack Orientation="Orientation.Horizontal" Style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">Cấu hình kết quả điền khuyết</h3>
+                            <FluentButton Appearance="Appearance.Accent" IconStart="@(new Icons.Regular.Size16.Add())" OnClick="AddDienKetQua">Thêm ô điền</FluentButton>
+                        </FluentStack>
+
+                        @for (int i = 0; i < ModelForm.DapAnDienKetQuas.Count; i++)
+                        {
+                            var index = i;
+                            var dienKQ = ModelForm.DapAnDienKetQuas[index];
+
+                            <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 15px; align-items: flex-end;">
+                                <div style="font-weight: bold; padding-bottom: 8px;">Ô số @(index + 1):</div>
+                                <FluentNumberField @bind-Value="dienKQ.GiaTriDung" Label="Giá trị chuẩn xác" Step="0.0001" Style="width: 200px;" />
+                                <FluentNumberField @bind-Value="dienKQ.SaiSoChoPhep" Label="Sai số cho phép (+/-)" Step="0.0001" Min="0" Style="width: 200px;" />
+                                <FluentButton Appearance="Appearance.Lightweight" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => RemoveDienKetQua(dienKQ))" Style="color:red; margin-bottom: 4px;" />
+                            </div>
+                        }
+                    }
+                </div>
+            </FluentTab>
+        </FluentTabs>
+
+        @* NÚT LƯU *@
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" Style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
             <FluentButton Appearance="Appearance.Neutral" OnClick="GoBack" Disabled="@IsSaving" Style="margin-right: 10px;">Hủy bỏ</FluentButton>
             <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Loading="@IsSaving">Lưu thông tin</FluentButton>
         </FluentStack>
@@ -186,9 +267,9 @@ else
     private CauHoiForm ModelForm = new();
     private List<KhoaHocDto> DanhSachKhoaHoc = new();
 
-    // Quản lý trạng thái UI
     private string QuestionInputType { get; set; } = "Text";
     private List<string> DapAnInputTypes { get; set; } = new();
+    private List<string> MenhDeInputTypes { get; set; } = new(); // Thêm mảng quản lý giao diện Mệnh đề
 
     protected override async Task OnInitializedAsync()
     {
@@ -198,6 +279,7 @@ else
         {
             DanhSachKhoaHoc = resKH.Data;
         }
+
         if (Id.HasValue && Id.Value != Guid.Empty)
         {
             var req = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = $"/CauHoi/{Id.Value}", HasAuthorization = true };
@@ -211,50 +293,65 @@ else
                     HinhAnhUrl = res.Data.HinhAnhUrl,
                     LoaiCauHoi = res.Data.LoaiCauHoi,
                     KhoaHocId = res.Data.KhoaHocId,
-                    MonHoc = res.Data.MonHoc, // ĐÃ BỔ SUNG MAP MÔN HỌC TỪ DTO XUỐNG FORM
+                    MonHoc = res.Data.MonHoc,
                     MucDo = res.Data.MucDo,
                     ChuDe = res.Data.ChuDe,
                     GiaiThich = res.Data.GiaiThich,
                     GiangVienId = res.Data.GiangVienId,
-                    DapAns = res.Data.DapAns.Select(d => new DapAnForm
+
+                    DapAns = res.Data.DapAns?.Select(d => new DapAnForm
                     {
                         NoiDung = d.NoiDung,
                         HinhAnhUrl = d.HinhAnhUrl,
                         LaDapAnDung = d.LaDapAnDung,
                         ThuTu = d.ThuTu
-                    }).ToList()
+                    }).ToList() ?? new(),
+
+                    MenhDeDungSais = res.Data.MenhDeDungSais?.Select(m => new MenhDeDungSaiForm
+                    {
+                        NoiDung = m.NoiDung,
+                        HinhAnhUrl = m.HinhAnhUrl,
+                        LaDung = m.LaDung,
+                        ThuTu = m.ThuTu
+                    }).ToList() ?? new(),
+
+                    DapAnDienKetQuas = res.Data.DapAnDienKetQuas?.Select(d => new DapAnDienKetQuaForm
+                    {
+                        GiaTriDung = d.GiaTriDung,
+                        SaiSoChoPhep = d.SaiSoChoPhep
+                    }).ToList() ?? new()
                 };
 
                 QuestionInputType = !string.IsNullOrEmpty(ModelForm.HinhAnhUrl) ? "Image" : "Text";
-
-                // Set trạng thái cho list Đáp án
                 DapAnInputTypes = ModelForm.DapAns.Select(d => !string.IsNullOrEmpty(d.HinhAnhUrl) ? "Image" : "Text").ToList();
+                MenhDeInputTypes = ModelForm.MenhDeDungSais.Select(m => !string.IsNullOrEmpty(m.HinhAnhUrl) ? "Image" : "Text").ToList();
             }
         }
         else
         {
             ModelForm.LoaiCauHoi = Enum.GetValues<EnumLoaiCauHoi>().FirstOrDefault();
             ModelForm.MucDo = Enum.GetValues<EnumMucDo>().FirstOrDefault();
-            // Mặc định tạo 4 đáp án trắng cho tiện
+
             for (int i = 0; i < 4; i++) AddDapAn();
+            for (int i = 0; i < 4; i++) AddMenhDe();
+            AddDienKetQua();
         }
 
-        // Mock ID Giảng viên (Thực tế lấy từ Context đăng nhập)
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            // Lấy ID từ Claim (Tương ứng với id truyền vào lúc login)
             var userIdString = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
             if (Guid.TryParse(userIdString, out Guid realUserId))
             {
                 ModelForm.GiangVienId = realUserId;
             }
         }
 
+        await Task.Delay(300);
         IsLoading = false;
+        StateHasChanged();
     }
 
     private void AddDapAn()
@@ -273,28 +370,48 @@ else
         }
     }
 
+    private void AddMenhDe()
+    {
+        ModelForm.MenhDeDungSais.Add(new MenhDeDungSaiForm { ThuTu = ModelForm.MenhDeDungSais.Count + 1 });
+        MenhDeInputTypes.Add("Text");
+    }
+
+    private void RemoveMenhDe(MenhDeDungSaiForm item)
+    {
+        var index = ModelForm.MenhDeDungSais.IndexOf(item);
+        if (index >= 0)
+        {
+            ModelForm.MenhDeDungSais.RemoveAt(index);
+            MenhDeInputTypes.RemoveAt(index);
+        }
+    }
+
+    private void AddDienKetQua() => ModelForm.DapAnDienKetQuas.Add(new DapAnDienKetQuaForm());
+    private void RemoveDienKetQua(DapAnDienKetQuaForm item) => ModelForm.DapAnDienKetQuas.Remove(item);
+
     private async Task Save()
     {
-        if (ModelForm.DapAns.Count < 2)
-        {
-            ToastService.ShowWarning("Câu hỏi phải có ít nhất 2 đáp án.");
-            return;
-        }
-        if (!ModelForm.DapAns.Any(x => x.LaDapAnDung))
-        {
-            ToastService.ShowWarning("Vui lòng đánh dấu ít nhất 1 đáp án đúng.");
-            return;
-        }
-
-        // Validation nhẹ: Bắt buộc chọn 1 trong 2 để đề thi không bị lỗi
         if (ModelForm.MonHoc == null && (ModelForm.KhoaHocId == null || ModelForm.KhoaHocId == Guid.Empty))
         {
             ToastService.ShowWarning("Vui lòng chọn Môn học HOẶC Khóa học cho câu hỏi này.");
             return;
         }
 
-        // Cập nhật lại thứ tự
-        for (int i = 0; i < ModelForm.DapAns.Count; i++) ModelForm.DapAns[i].ThuTu = i + 1;
+        if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.MotLuaChon)
+        {
+            if (ModelForm.DapAns.Count < 2) { ToastService.ShowWarning("Câu hỏi trắc nghiệm phải có ít nhất 2 đáp án."); return; }
+            if (!ModelForm.DapAns.Any(x => x.LaDapAnDung)) { ToastService.ShowWarning("Vui lòng đánh dấu ít nhất 1 đáp án đúng."); return; }
+            for (int i = 0; i < ModelForm.DapAns.Count; i++) ModelForm.DapAns[i].ThuTu = i + 1;
+        }
+        else if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.MenhDeDungSai)
+        {
+            if (ModelForm.MenhDeDungSais.Count == 0) { ToastService.ShowWarning("Vui lòng cấu hình ít nhất 1 mệnh đề."); return; }
+            for (int i = 0; i < ModelForm.MenhDeDungSais.Count; i++) ModelForm.MenhDeDungSais[i].ThuTu = i + 1;
+        }
+        else if (ModelForm.LoaiCauHoi == EnumLoaiCauHoi.DienKetQua)
+        {
+            if (ModelForm.DapAnDienKetQuas.Count == 0) { ToastService.ShowWarning("Vui lòng cấu hình ít nhất 1 ô điền kết quả."); return; }
+        }
 
         IsSaving = true;
         try

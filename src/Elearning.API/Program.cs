@@ -54,9 +54,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILogViPhamService, LogViPhamService>();
 builder.Services.AddScoped<IMaTranDeThiMacDinhService, MaTranDeThiMacDinhService>();
 builder.Services.AddScoped<IHoSoGiaoVienService, HoSoGiaoVienService>();
-
+builder.Services.AddHttpClient<IAIService, Elearning.Shared.Commons.Services.AIService>();
 builder.Services.AddScoped<IStorageService, MinioStorageService>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+
+builder.Services.AddSingleton<VideoTranscriptQueue>();
+builder.Services.AddHostedService<TranscriptBackgroundWorker>();
 
 var secretKey = builder.Configuration["JwtSettings:SecretKey"];
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);

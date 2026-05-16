@@ -9,7 +9,9 @@ namespace Elearning.Domain.Entities
     {
         public Guid CauHoiId { get; set; }
 
-        public string NoiDung { get; set; } = default!;
+        public string? HinhAnhUrl { get; set; }
+
+        public string? NoiDung { get; set; } = default!;
 
         public bool LaDung { get; set; }
 

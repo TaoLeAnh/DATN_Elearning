@@ -16,5 +16,6 @@ namespace Elearning.Application.Interfaces
         Task<bool> UpdateAsync(Guid id, MaTranDeThiMacDinhForm item);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> ToggleActiveAsync(Guid id);
+        Task<List<MaTranDeThiMacDinhDto>> GetActiveByKyThiIdAsync(Guid kyThiId);
     }
 }

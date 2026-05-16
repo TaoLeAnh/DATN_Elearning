@@ -68,5 +68,12 @@ namespace Elearning.API.Controllers.v1
             // Trả về một Object JSON để CallServiceRegistryAPI không bị lỗi Parse
             return Ok(true);
         }
+        [HttpGet("active-by-kythi/{kyThiId:guid}")]
+        public async Task<ActionResult<List<MaTranDeThiMacDinhDto>>> GetActiveByKyThiId(Guid kyThiId)
+        {
+            // Gọi xuống service để xử lý logic lấy danh sách ma trận
+            var result = await _service.GetActiveByKyThiIdAsync(kyThiId);
+            return Ok(result);
+        }
     }
 }

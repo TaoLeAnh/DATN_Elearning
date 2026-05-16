@@ -1,6 +1,7 @@
 ﻿using Elearning.Application.Interfaces;
 using Elearning.Domain.Entities;
 using Elearning.Domain.Interfaces;
+using Elearning.Shared.Commons.Extensions;
 using Elearning.Shared.Commons.Interfaces.Extentions;
 using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons;
 using Elearning.Shared.Contracts.Portal.Dtos.KyThi;
@@ -317,6 +318,128 @@ namespace Elearning.Application.Services
             }
 
             // 3. Lưu toàn bộ (bao gồm cả danh sách câu hỏi mới VÀ trạng thái LoaiDeThi vừa cập nhật)
+            await repoCauHoiKyThi.AddRangeAsync(finalQuestions);
+            await _unitOfWork.CompleteAsync(_requestContext.CurrentIdUser);
+
+            return true;
+        }
+        public async Task<bool> GenerateRandomExamTheoMaTranAsync(Guid kyThiId, Guid maTranId)
+        {
+            // 1. Lấy cấu hình của cái Ma trận mẫu lên từ Database
+            var maTranDb = await _unitOfWork.MaTranDeThiMacDinhRepository
+                .GetTableNoTracking()
+                .Include(x => x.ChiTiets)
+                .FirstOrDefaultAsync(x => x.Id == maTranId);
+
+            if (maTranDb == null || maTranDb.ChiTiets == null || !maTranDb.ChiTiets.Any())
+            {
+                throw new Exception("Không tìm thấy ma trận hoặc ma trận chưa có quy tắc nào.");
+            }
+
+            // 2. Chuyển đổi (Map) các chi tiết của Ma trận thành cái Form để tái sử dụng logic cũ
+            var maTranForm = new MaTranDeThiForm
+            {
+                KhoaHocId = Guid.Empty,
+                DanhSachLuat = maTranDb.ChiTiets.Select(c => new LuatRandomForm
+                {
+                    PhanThi = c.PhanThi,
+                    LoaiCauHoiGoc = c.LoaiCauHoi, // Map đúng tên property
+                    MucDo = c.MucDo,
+                    ChuDe = c.ChuDe ?? string.Empty, // Đảm bảo an toàn không bị null
+                    SoLuongCanLay = c.SoLuong
+                }).ToList()
+            };
+
+            // 3. Ném thẳng cái Form vừa tạo vào hàm Random cũ để nó xử lý bốc câu hỏi
+            return await GenerateRandomExamAsyncV2(kyThiId, maTranForm);
+        }
+
+        public async Task<bool> GenerateRandomExamAsyncV2(Guid kyThiId, MaTranDeThiForm maTran)
+        {
+            var repoCauHoi = _unitOfWork.CauHoiRepository;
+            var repoCauHoiKyThi = _unitOfWork.CauHoiKyThiRepository;
+
+            // 1. Xóa trắng đề thi cũ (nếu có) trước khi tạo mới
+            var oldItems = await repoCauHoiKyThi.GetTableAsTracking()
+                                                .Where(x => x.KyThiId == kyThiId)
+                                                .ToListAsync();
+            if (oldItems.Any()) repoCauHoiKyThi.DeleteRange(oldItems);
+
+            var finalQuestions = new List<CauHoiKyThi>();
+
+            var thuTuDict = new Dictionary<EnumLoaiPhanThi, int>
+    {
+        { EnumLoaiPhanThi.TracNghiem, 1 },
+        { EnumLoaiPhanThi.MenhDeDungSai, 1 },
+        { EnumLoaiPhanThi.DienKetQua, 1 }
+    };
+
+            // Lấy thông tin Kỳ thi hiện tại
+            var kyThi = await _unitOfWork.KyThiRepository.GetByIdAsync(kyThiId);
+            if (kyThi == null) return false;
+
+            // CẬP NHẬT LOẠI ĐỀ THI THÀNH "ĐỀ NGẪU NHIÊN"
+            //kyThi.LoaiDeThi = EnumLoaiDeThi.DeThiNgauNhien;
+            //_unitOfWork.KyThiRepository.Update(kyThi);
+
+            // 2. Chạy qua từng "Luật" trong Ma trận để bốc câu hỏi
+            foreach (var luat in maTran.DanhSachLuat)
+            {
+                if (luat.SoLuongCanLay <= 0) continue;
+
+                // Lọc CƠ BẢN theo Loại câu và Mức độ
+                var queryCauHoi = repoCauHoi.GetTableNoTracking()
+                                            .Where(x => x.LoaiCauHoi == luat.LoaiCauHoiGoc
+                                                     && x.MucDo == luat.MucDo);
+
+                // BỔ SUNG FIX: Chỉ lọc theo Chủ đề NẾU người dùng CÓ NHẬP Chủ đề trong Ma trận
+                if (!string.IsNullOrWhiteSpace(luat.ChuDe))
+                {
+                    queryCauHoi = queryCauHoi.Where(x => x.ChuDe.ToLower() == luat.ChuDe.ToLower());
+                }
+
+                // Lọc theo Khóa học hoặc Môn học tùy theo tính chất của Kỳ thi
+                if (!kyThi.IsPublic && kyThi.KhoaHocId.HasValue)
+                {
+                    queryCauHoi = queryCauHoi.Where(x => x.KhoaHocId == kyThi.KhoaHocId);
+                }
+                else if (kyThi.IsPublic && kyThi.MonHoc.HasValue)
+                {
+                    queryCauHoi = queryCauHoi.Where(x => x.MonHoc == kyThi.MonHoc);
+                }
+                else if (kyThi.IsPublic && !kyThi.MonHoc.HasValue)
+                {
+                    throw new Exception("Đề thi công khai (Public) bắt buộc phải cấu hình Môn học trước khi tạo đề ngẫu nhiên.");
+                }
+
+                // Thực hiện bốc ngẫu nhiên (Guid.NewGuid()) và lấy đủ số lượng
+                var cauHois = await queryCauHoi.OrderBy(x => Guid.NewGuid())
+                                               .Take(luat.SoLuongCanLay)
+                                               .Select(x => x.Id)
+                                               .ToListAsync();
+
+                // Kiểm tra xem Ngân hàng có đủ câu để bốc không?
+                if (cauHois.Count < luat.SoLuongCanLay)
+                {
+                    string dkLoc = !kyThi.IsPublic ? $"thuộc Khóa học '{kyThi.TenKyThi}'" : $"thuộc Môn '{kyThi.MonHoc}'";
+                    string dkChuDe = string.IsNullOrWhiteSpace(luat.ChuDe) ? "Bất kỳ chủ đề nào" : $"'{luat.ChuDe}'";
+                    throw new Exception($"Ngân hàng không đủ câu hỏi {dkLoc} cho Chủ đề {dkChuDe}, Mức độ '{luat.MucDo.GetDescription()}'. Cần {luat.SoLuongCanLay}, nhưng chỉ có {cauHois.Count}.");
+                }
+
+                // Đưa vào danh sách cuối cùng
+                foreach (var cauHoiId in cauHois)
+                {
+                    finalQuestions.Add(new CauHoiKyThi
+                    {
+                        KyThiId = kyThiId,
+                        CauHoiId = cauHoiId,
+                        PhanThi = luat.PhanThi,
+                        ThuTu = thuTuDict[luat.PhanThi]++
+                    });
+                }
+            }
+
+            // 3. Lưu toàn bộ xuống DB
             await repoCauHoiKyThi.AddRangeAsync(finalQuestions);
             await _unitOfWork.CompleteAsync(_requestContext.CurrentIdUser);
 

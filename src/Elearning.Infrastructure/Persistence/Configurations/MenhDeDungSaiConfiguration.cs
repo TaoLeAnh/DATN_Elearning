@@ -16,8 +16,12 @@ namespace Elearning.Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.NoiDung)
-                .IsRequired()
-                .HasMaxLength(500);
+                .IsRequired(false)
+                .HasColumnType("nvarchar(max)");
+
+            builder.Property(x => x.HinhAnhUrl)
+                .HasMaxLength(1000) // URL thường dài nên cho hẳn 1000 cho thoải mái
+                .IsRequired(false);
 
             builder.HasOne(x => x.CauHoi)
                 .WithMany(x => x.MenhDeDungSais) // <--- SỬA CHỖ NÀY: Điền thêm x => x.MenhDeDungSais

@@ -13,6 +13,8 @@ namespace Elearning.Domain.Entities
         // Chứa nội dung văn bản nếu là bài đọc
         public string? NoiDung { get; set; }
 
+        //Chứa toàn bộ phụ đề video hoặc text bóc từ file tài liệu
+        public string? TaiLieuAI { get; set; }
         // Link Youtube, Vimeo hoặc lưu trữ riêng
         public string? VideoUrl { get; set; }
 

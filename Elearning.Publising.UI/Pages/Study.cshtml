@@ -390,6 +390,109 @@
     </div>
 </div>
 
+<div class="chatbot-widget" id="chatbotWidget">
+    <div class="chatbot-header" onclick="toggleChatbot()">
+        <span><i class="fa-solid fa-robot"></i> Gia sư AI E-Learning</span>
+        <span id="chatbotToggleIcon"><i class="fa-solid fa-chevron-up"></i></span>
+    </div>
+
+    <!-- Thân chatbot (Mặc định ẩn) -->
+    <div class="chatbot-body" id="chatbotBody" style="display: none;">
+        <div class="msg-bubble msg-bot">
+            <p>Chào bạn! Mình là Gia sư AI. Bạn có thắc mắc gì về bài học này không?</p>
+        </div>
+        <!-- Nơi hiển thị chữ "Đang suy nghĩ..." -->
+        <div id="aiTypingIndicator" class="ai-typing">Gia sư đang suy nghĩ...</div>
+    </div>
+
+    <!-- Ô nhập tin nhắn (Mặc định ẩn) -->
+    <div class="chatbot-footer" id="chatbotFooter" style="display: none;">
+        <form id="chatbotForm" onsubmit="sendChatMessage(event)" class="input-group">
+            <input type="text" id="chatInput" class="form-control" placeholder="Hỏi gia sư..." autocomplete="off" />
+            <button type="submit" id="btnSendChat" class="btn btn-primary">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* CSS cho Khung Chatbot nổi */
+    .chatbot-widget {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 360px;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+        z-index: 9999;
+        background: #fff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .chatbot-header {
+        background-color: #0d6efd;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .chatbot-body {
+        height: 350px;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .msg-bubble {
+        max-width: 85%;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        word-wrap: break-word;
+        white-space: pre-wrap; /* Hỗ trợ xuống dòng */
+        font-size: 0.95rem;
+    }
+
+    .msg-user {
+        align-self: flex-end;
+        background-color: #0d6efd;
+        color: white;
+        border-radius: 15px 15px 0px 15px;
+    }
+
+    .msg-bot {
+        align-self: flex-start;
+        background-color: #e9ecef;
+        color: #212529;
+        border-radius: 15px 15px 15px 0px;
+    }
+
+    .chatbot-footer {
+        padding: 10px;
+        background: #fff;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .ai-typing {
+        font-style: italic;
+        color: #6c757d;
+        font-size: 0.85rem;
+        align-self: flex-start;
+        margin-bottom: 10px;
+        display: none;
+    }
+</style>
+
 @section Scripts {
     <script>
         function markLessonComplete(baiHocId) {
@@ -630,5 +733,93 @@
                 });
             }
         });
+                const currentLessonId = '@(Model.ActiveLesson?.Id)';
+        const currentCourseId = '@(Model.KhoaHocDetail?.Id)';
+        let isChatOpen = false;
+
+        // 1. Hàm bật/tắt khung chat
+        function toggleChatbot() {
+            isChatOpen = !isChatOpen;
+            document.getElementById('chatbotBody').style.display = isChatOpen ? 'flex' : 'none';
+            document.getElementById('chatbotFooter').style.display = isChatOpen ? 'block' : 'none';
+            document.getElementById('chatbotToggleIcon').innerHTML = isChatOpen ? '<i class="fa-solid fa-chevron-down"></i>' : '<i class="fa-solid fa-chevron-up"></i>';
+
+            if(isChatOpen) {
+                scrollToBottomChat();
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        // 2. Hàm cuộn tin nhắn xuống dưới cùng
+        function scrollToBottomChat() {
+            const body = document.getElementById('chatbotBody');
+            body.scrollTop = body.scrollHeight;
+        }
+
+        // 3. Hàm in tin nhắn ra giao diện
+        function appendMessage(sender, text) {
+            const chatbotBody = document.getElementById('chatbotBody');
+            const bubbleClass = sender === 'user' ? 'msg-user' : 'msg-bot';
+
+            // Đổi ký tự in đậm Markdown **chữ** thành thẻ <strong>
+            const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            const msgHtml = `<div class="msg-bubble ${bubbleClass}">${formattedText}</div>`;
+            const typingIndicator = document.getElementById('aiTypingIndicator');
+            typingIndicator.insertAdjacentHTML('beforebegin', msgHtml);
+
+            scrollToBottomChat();
+        }
+
+        // 4. Hàm gửi tin nhắn đi (Gọi API)
+        async function sendChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if(!message) return;
+
+            appendMessage('user', message);
+            input.value = '';
+
+            const btnSend = document.getElementById('btnSendChat');
+            const typingIndicator = document.getElementById('aiTypingIndicator');
+            btnSend.disabled = true;
+            typingIndicator.style.display = 'block';
+            scrollToBottomChat();
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                const response = await fetch('?handler=AskTutor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify({
+                        userMessage: message,
+                        lessonId: currentLessonId && currentLessonId !== '' ? currentLessonId : null,
+                        courseId: currentCourseId && currentCourseId !== '' ? currentCourseId : null
+                    })
+                });
+
+                const data = await response.json();
+
+                typingIndicator.style.display = 'none';
+
+                if(data.success) {
+                    appendMessage('bot', data.reply);
+                } else {
+                    appendMessage('bot', 'Lỗi: ' + data.reply);
+                }
+            } catch(err) {
+                typingIndicator.style.display = 'none';
+                appendMessage('bot', 'Lỗi kết nối mạng! Xin thử lại sau.');
+            } finally {
+                btnSend.disabled = false;
+                scrollToBottomChat();
+                input.focus();
+            }
+        }
     </script>
 }

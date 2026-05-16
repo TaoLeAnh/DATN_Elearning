@@ -2,6 +2,13 @@
 @model Elearning.Publising.UI.Pages.LamBaiModel
 @{
     ViewData["Title"] = Model.ActiveQuiz?.TenBo ?? "Phòng thi trực tuyến";
+
+    // PHÂN LOẠI CÂU HỎI THÀNH 3 PHẦN DỰA TRÊN ENUM (Chuẩn xác 100%)
+    var allQuestions = Model.ActiveQuiz?.ChiTietBoCauHois?.OrderBy(x => x.ThuTu).ToList() ?? new();
+
+    var phan1 = allQuestions.Where(q => q.LoaiCauHoi == Elearning.Shared.Contracts.Portal.Enums.EnumLoaiCauHoi.MotLuaChon).ToList();
+    var phan2 = allQuestions.Where(q => q.LoaiCauHoi == Elearning.Shared.Contracts.Portal.Enums.EnumLoaiCauHoi.MenhDeDungSai).ToList();
+    var phan3 = allQuestions.Where(q => q.LoaiCauHoi == Elearning.Shared.Contracts.Portal.Enums.EnumLoaiCauHoi.DienKetQua).ToList();
 }
 
 @Html.AntiForgeryToken()
@@ -20,18 +27,18 @@
 
             <div id="quiz-intro-screen" class="text-center p-5 bg-white shadow-sm rounded border-top border-4 border-warning">
                 <h2 class="fw-bold text-danger mb-3">@Model.ActiveQuiz.TenBo</h2>
-                <p class="text-muted mb-4">@(string.IsNullOrEmpty(Model.ActiveQuiz.MoTa) ? "Đề thi thử trực tuyến bám sát cấu trúc chuẩn." : Model.ActiveQuiz.MoTa)</p>
+                <p class="text-muted mb-4">@(string.IsNullOrEmpty(Model.ActiveQuiz.MoTa) ? "Đề thi thử trực tuyến bám sát cấu trúc chuẩn Bộ Giáo dục 2025." : Model.ActiveQuiz.MoTa)</p>
 
                 <div class="d-flex justify-content-center gap-4 mb-5">
                     <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
                         <i class="fa-solid fa-list-ol fa-2x text-primary mb-2"></i>
                         <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ChiTietBoCauHois?.Count ?? 0)</h4>
-                        <small class="text-muted">Câu hỏi</small>
+                        <small class="text-muted">Tổng số câu hỏi</small>
                     </div>
                     <div class="px-4 py-3 bg-light rounded text-center shadow-sm">
                         <i class="fa-regular fa-clock fa-2x text-warning mb-2"></i>
                         <h4 class="fw-bold m-0">@(Model.ActiveQuiz.ThoiLuongPhut)</h4>
-                        <small class="text-muted">Phút</small>
+                        <small class="text-muted">Phút làm bài</small>
                     </div>
                 </div>
 
@@ -51,91 +58,183 @@
                 <h4 class="fw-bold text-center text-danger mb-2">@Model.ActiveQuiz.TenBo</h4>
                 <hr class="mb-4" />
 
-                @foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
+                @* ========================================= *@
+                @* PHẦN I: TRẮC NGHIỆM MỘT LỰA CHỌN          *@
+                @* ========================================= *@
+                @if (phan1.Any())
                 {
-                    <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-primary" id="question_@question.ThuTu" data-cauhoi-id="@question.CauHoiId">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold m-0 text-primary">Câu @question.ThuTu</h5>
-                        </div>
+                    <div class="alert shadow-sm border-0 border-start border-5 border-primary fw-bold mb-4" style="background-color: #e9f2ff; color: #084298;">
+                        PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Thí sinh trả lời từ câu 1 đến câu @phan1.Count. Mỗi câu hỏi thí sinh chỉ chọn một phương án.
+                    </div>
 
-                        <div class="mb-4" style="font-size: 1.05rem;">
-                            @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                    int localCounter1 = 1;
+                    foreach (var question in phan1)
+                    {
+                        <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-primary" id="question_@question.CauHoiId" data-cauhoi-id="@question.CauHoiId">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold m-0 text-primary">Câu @localCounter1</h5>
+                            </div>
+
+                            <div class="mb-4" style="font-size: 1.05rem;">
+                                @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                                {
+                                    <div>@Html.Raw(question.NoiDungCauHoi)</div>
+                                }
+                                @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
+                                {
+                                    <div class="mt-3">
+                                        <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                    </div>
+                                }
+                            </div>
+
+                            @if (question.DapAns != null && question.DapAns.Any())
                             {
-                                <div>@Html.Raw(question.NoiDungCauHoi)</div>
-                            }
-                            @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
-                            {
-                                <div class="mt-3">
-                                    <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                <div class="d-flex flex-column gap-2 mt-3">
+                                    @{
+                                        char prefix = 'A';
+                                    }
+                                    @foreach (var dapAn in question.DapAns.OrderBy(d => d.ThuTu))
+                                    {
+                                        <label class="quiz-option p-3 border rounded cursor-pointer hover-bg-light d-flex align-items-start">
+                                            <input type="radio" name="q_@question.CauHoiId" value="@dapAn.Id" class="me-3 mt-1" style="transform: scale(1.3);">
+                                            <span class="fw-bold me-2">@prefix.</span>
+                                            <div class="d-flex flex-column">
+                                                @if (!string.IsNullOrEmpty(dapAn.NoiDung))
+                                                {
+                                                    <div>@Html.Raw(dapAn.NoiDung)</div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(dapAn.HinhAnhUrl))
+                                                {
+                                                    <div class="mt-2"><img src="@dapAn.HinhAnhUrl" class="img-fluid rounded border" style="max-height: 150px;" /></div>
+                                                }
+                                            </div>
+                                        </label>
+                                        prefix++;
+                                    }
                                 </div>
                             }
-                        </div>
 
-                        @if (question.DapAns != null && question.DapAns.Any())
-                        {
-                            <div class="d-flex flex-column gap-2 mt-3">
-                                @{
-                                    char prefix = 'A';
-                                }
-                                @foreach (var dapAn in question.DapAns.OrderBy(d => d.ThuTu))
-                                {
-                                    <label class="quiz-option p-3 border rounded cursor-pointer hover-bg-light d-flex align-items-start">
-                                        <input type="radio" name="q_@question.CauHoiId" value="@dapAn.Id" class="me-3 mt-1" style="transform: scale(1.3);">
-                                        <span class="fw-bold me-2">@prefix.</span>
-                                        <div class="d-flex flex-column">
-                                            @if (!string.IsNullOrEmpty(dapAn.NoiDung))
-                                            {
-                                                <div>@Html.Raw(dapAn.NoiDung)</div>
-                                            }
-                                            @if (!string.IsNullOrEmpty(dapAn.HinhAnhUrl))
-                                            {
-                                                <div class="mt-2"><img src="@dapAn.HinhAnhUrl" class="img-fluid rounded border" style="max-height: 150px;" /></div>
-                                            }
-                                        </div>
-                                    </label>
-                                    prefix++;
-                                }
-                            </div>
-                        }
-                        else if (question.MenhDeDungSais != null && question.MenhDeDungSais.Any())
-                        {
-                            <div class="alert alert-info py-2 mb-3">Chọn <strong>Đúng</strong> hoặc <strong>Sai</strong> cho từng ý:</div>
-                            <div class="d-flex flex-column gap-3 mt-2">
-                                @{
-                                    char mdPrefix = 'a';
-                                }
-                                @foreach (var md in question.MenhDeDungSais.OrderBy(m => m.ThuTu))
-                                {
-                                    <div class="p-3 border rounded bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                                        <div class="d-flex">
-                                            <span class="fw-bold me-2">@mdPrefix)</span>
-                                            <span>@Html.Raw(md.NoiDung)</span>
-                                        </div>
-                                        <div class="d-flex gap-3 bg-white p-2 rounded shadow-sm border" style="min-width: 150px; justify-content: center;">
-                                            <label class="cursor-pointer text-success fw-bold"><input type="radio" name="md_@md.Id" value="true" class="me-2"> Đúng</label>
-                                            <div style="width: 1px; background: #ddd;"></div>
-                                            <label class="cursor-pointer text-danger fw-bold"><input type="radio" name="md_@md.Id" value="false" class="me-2"> Sai</label>
-                                        </div>
-                                    </div>
-                                    mdPrefix++;
-                                }
-                            </div>
-                        }
-                        else if (question.DapAnDienKetQuas != null && question.DapAnDienKetQuas.Any())
-                        {
-                            <div class="mt-4 p-4 border border-2 border-primary rounded" style="background-color: #f8faff;">
-                                <label class="fw-bold text-primary mb-2">Nhập kết quả của bạn:</label>
-                                <input type="text" class="form-control form-control-lg border-primary shadow-sm" name="dkq_@question.CauHoiId">
-                            </div>
-                        }
-
-                        <div class="text-end mt-3">
-                            <div class="form-check form-switch d-inline-block">
-                                <input class="form-check-input" type="checkbox" id="review_@question.Id">
-                                <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                            <div class="text-end mt-3">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="review_@question.Id">
+                                    <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                                </div>
                             </div>
                         </div>
+                        localCounter1++;
+                    }
+                }
+
+                @* ========================================= *@
+                @* PHẦN II: MỆNH ĐỀ ĐÚNG SAI                 *@
+                @* ========================================= *@
+                @if (phan2.Any())
+                {
+                    <div class="alert shadow-sm border-0 border-start border-5 border-warning fw-bold mb-4 mt-5" style="background-color: #fff8e6; color: #997404;">
+                        PHẦN II. Câu trắc nghiệm đúng sai. Thí sinh trả lời từ câu 1 đến câu @phan2.Count. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.
                     </div>
+
+                    int localCounter2 = 1;
+                    foreach (var question in phan2)
+                    {
+                        <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-warning" id="question_@question.CauHoiId" data-cauhoi-id="@question.CauHoiId">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold m-0" style="color: #d39e00;">Câu @localCounter2</h5>
+                            </div>
+
+                            <div class="mb-4" style="font-size: 1.05rem;">
+                                @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                                {
+                                    <div>@Html.Raw(question.NoiDungCauHoi)</div>
+                                }
+                                @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
+                                {
+                                    <div class="mt-3">
+                                        <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                    </div>
+                                }
+                            </div>
+
+                            @if (question.MenhDeDungSais != null && question.MenhDeDungSais.Any())
+                            {
+                                <div class="d-flex flex-column gap-3 mt-2">
+                                    @{
+                                        char mdPrefix = 'a';
+                                    }
+                                    @foreach (var md in question.MenhDeDungSais.OrderBy(m => m.ThuTu))
+                                    {
+                                        <div class="p-3 border rounded bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                            <div class="d-flex align-items-center">
+                                                <span class="fw-bold me-2">@mdPrefix)</span>
+                                                <span>@Html.Raw(md.NoiDung)</span>
+                                            </div>
+                                            <div class="d-flex gap-3 bg-white p-2 rounded shadow-sm border" style="min-width: 150px; justify-content: center;">
+                                                <label class="cursor-pointer text-success fw-bold"><input type="radio" name="md_@md.Id" value="true" class="me-2"> Đúng</label>
+                                                <div style="width: 1px; background: #ddd;"></div>
+                                                <label class="cursor-pointer text-danger fw-bold"><input type="radio" name="md_@md.Id" value="false" class="me-2"> Sai</label>
+                                            </div>
+                                        </div>
+                                        mdPrefix++;
+                                    }
+                                </div>
+                            }
+
+                            <div class="text-end mt-3">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="review_@question.Id">
+                                    <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                                </div>
+                            </div>
+                        </div>
+                        localCounter2++;
+                    }
+                }
+
+                @* ========================================= *@
+                @* PHẦN III: ĐIỀN KẾT QUẢ NGẮN               *@
+                @* ========================================= *@
+                @if (phan3.Any())
+                {
+                    <div class="alert shadow-sm border-0 border-start border-5 border-success fw-bold mb-4 mt-5" style="background-color: #e6f9ec; color: #146c43;">
+                        PHẦN III. Câu trắc nghiệm trả lời ngắn. Thí sinh trả lời từ câu 1 đến câu @phan3.Count.
+                    </div>
+
+                    int localCounter3 = 1;
+                    foreach (var question in phan3)
+                    {
+                        <div class="quiz-question-card mb-4 p-4 shadow-sm bg-white rounded border-start border-4 border-success" id="question_@question.CauHoiId" data-cauhoi-id="@question.CauHoiId">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold m-0 text-success">Câu @localCounter3</h5>
+                            </div>
+
+                            <div class="mb-4" style="font-size: 1.05rem;">
+                                @if (!string.IsNullOrEmpty(question.NoiDungCauHoi))
+                                {
+                                    <div>@Html.Raw(question.NoiDungCauHoi)</div>
+                                }
+                                @if (!string.IsNullOrEmpty(question.HinhAnhUrlCauHoi))
+                                {
+                                    <div class="mt-3">
+                                        <img src="@question.HinhAnhUrlCauHoi" class="img-fluid rounded shadow-sm border" style="max-height: 350px;" alt="Ảnh câu hỏi" />
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mt-4 p-4 border border-2 border-success rounded" style="background-color: #f7fdf9;">
+                                <label class="fw-bold text-success mb-2">Nhập đáp án của bạn:</label>
+                                <input type="text" class="form-control form-control-lg border-success shadow-sm" name="dkq_@question.CauHoiId" placeholder="Ví dụ: 1.5, -2...">
+                            </div>
+
+                            <div class="text-end mt-3">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="review_@question.Id">
+                                    <label class="form-check-label text-muted" for="review_@question.Id">Lát kiểm tra lại</label>
+                                </div>
+                            </div>
+                        </div>
+                        localCounter3++;
+                    }
                 }
             </div>
 
@@ -156,6 +255,7 @@
 
         </div>
 
+        @* CỘT MENU THEO DÕI (TRACKER) CHIA 3 PHẦN *@
         <div class="col-lg-3" id="quiz-tracker-column" style="display: none;">
             <div id="quiz-tracker-container" class="quiz-tracker-box bg-white p-4 rounded shadow-sm position-sticky" style="top: 80px;">
                 <div class="tracker-stats d-flex justify-content-between text-center mb-4 pb-3 border-bottom">
@@ -172,15 +272,47 @@
                     </div>
                 </div>
 
-                <div class="question-palette custom-scrollbar d-flex flex-wrap gap-2 justify-content-center mb-4">
-                    @if (Model.ActiveQuiz.ChiTietBoCauHois != null)
+                <div class="question-palette custom-scrollbar d-flex flex-column gap-3 mb-4" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
+                    @if (phan1.Any())
                     {
-                        foreach (var question in Model.ActiveQuiz.ChiTietBoCauHois.OrderBy(x => x.ThuTu))
-                        {
-                            <a href="#question_@question.ThuTu" id="tracker_@question.ThuTu" class="tracker-btn btn btn-outline-secondary rounded-circle d-flex justify-content-center align-items-center text-decoration-none" style="width: 40px; height: 40px; padding: 0; transition: 0.3s;">
-                                @question.ThuTu
-                            </a>
-                        }
+                        <div class="w-100">
+                            <div class="text-start fw-bold text-primary small mb-2 border-bottom pb-1">PHẦN I (@phan1.Count câu)</div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                @for (int i = 0; i < phan1.Count; i++)
+                                {
+                                    var q = phan1[i];
+                                    <a href="#question_@q.CauHoiId" id="tracker_@q.CauHoiId" class="tracker-btn btn btn-outline-secondary rounded d-flex justify-content-center align-items-center text-decoration-none" style="width: 35px; height: 35px; padding: 0; font-size: 0.85rem; transition: 0.3s;">@(i + 1)</a>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (phan2.Any())
+                    {
+                        <div class="w-100">
+                            <div class="text-start fw-bold text-warning small mb-2 border-bottom pb-1">PHẦN II (@phan2.Count câu)</div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                @for (int i = 0; i < phan2.Count; i++)
+                                {
+                                    var q = phan2[i];
+                                    <a href="#question_@q.CauHoiId" id="tracker_@q.CauHoiId" class="tracker-btn btn btn-outline-secondary rounded d-flex justify-content-center align-items-center text-decoration-none" style="width: 35px; height: 35px; padding: 0; font-size: 0.85rem; transition: 0.3s;">@(i + 1)</a>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (phan3.Any())
+                    {
+                        <div class="w-100">
+                            <div class="text-start fw-bold text-success small mb-2 border-bottom pb-1">PHẦN III (@phan3.Count câu)</div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-start">
+                                @for (int i = 0; i < phan3.Count; i++)
+                                {
+                                    var q = phan3[i];
+                                    <a href="#question_@q.CauHoiId" id="tracker_@q.CauHoiId" class="tracker-btn btn btn-outline-secondary rounded d-flex justify-content-center align-items-center text-decoration-none" style="width: 35px; height: 35px; padding: 0; font-size: 0.85rem; transition: 0.3s;">@(i + 1)</a>
+                                }
+                            </div>
+                        </div>
                     }
                 </div>
 
@@ -189,15 +321,16 @@
                 </div>
 
                 <div class="tracker-legend small text-muted">
-                    <div class="d-flex align-items-center mb-2"><div class="rounded-circle bg-success me-2" style="width: 15px; height: 15px;"></div> Câu đã làm</div>
-                    <div class="d-flex align-items-center mb-2"><div class="rounded-circle border border-secondary me-2" style="width: 15px; height: 15px;"></div> Câu chưa làm</div>
-                    <div class="d-flex align-items-center"><div class="rounded-circle me-2" style="width: 15px; height: 15px; background-color: #a569bd;"></div> Cần kiểm tra lại</div>
+                    <div class="d-flex align-items-center mb-2"><div class="rounded bg-success me-2" style="width: 15px; height: 15px;"></div> Câu đã làm</div>
+                    <div class="d-flex align-items-center mb-2"><div class="rounded border border-secondary me-2" style="width: 15px; height: 15px;"></div> Câu chưa làm</div>
+                    <div class="d-flex align-items-center"><div class="rounded me-2" style="width: 15px; height: 15px; background-color: #a569bd;"></div> Cần kiểm tra lại</div>
                 </div>
             </div>
         </div>
 
     </div>
 </div>
+
 <div class="modal fade" id="thongBaoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -206,8 +339,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center py-4">
-                <div id="modalIcon" class="mb-3">
-                </div>
+                <div id="modalIcon" class="mb-3"></div>
                 <p id="modalMessage" class="fs-5 mb-0 text-secondary"></p>
             </div>
             <div class="modal-footer border-0 pt-0 justify-content-center">
@@ -221,7 +353,6 @@
 @section Scripts {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // --- KHAI BÁO BIẾN ---
             const introScreen = document.getElementById('quiz-intro-screen');
             const questionsContainer = document.getElementById('quiz-questions-container');
             const trackerColumn = document.getElementById('quiz-tracker-column');
@@ -240,7 +371,7 @@
             let soLanViPham = 0;
             const MAX_VI_PHAM = 3;
 
-            // --- 1. HÀM THÔNG BÁO MODAL (BẢN CHUẨN) ---
+            // --- 1. HÀM THÔNG BÁO MODAL ---
             function showThongBao(title, message, type = 'info', onConfirm = null) {
                 document.getElementById('modalTitle').innerText = title;
                 document.getElementById('modalMessage').innerText = message;
@@ -342,7 +473,6 @@
 
             // --- 5. NỘP BÀI ---
             btnNopBai.addEventListener('click', () => {
-                // Thay thế confirm browser bằng Modal thông báo
                 showThongBao("Xác nhận", "Bạn có chắc chắn muốn kết thúc bài làm và nộp bài không?", "question", () => {
                     submitQuizData();
                 });
@@ -362,7 +492,6 @@
                     danhSachTraLoi: []
                 };
 
-                // --- THU THẬP ĐÁP ÁN (FIXED: Lấy đủ 3 loại câu hỏi) ---
                 document.querySelectorAll('.quiz-question-card').forEach(card => {
                     let cauHoiId = card.getAttribute('data-cauhoi-id');
                     let traLoi = { cauHoiId: cauHoiId, dapAnId: null, giaTriNhap: null, menhDes: [] };
@@ -425,22 +554,54 @@
                 }
             }
 
-            // --- 6. LOGIC TRACKER ĐỔI MÀU (Giữ nguyên của bác) ---
+            // --- 6. LOGIC TRACKER ĐỔI MÀU ---
             const updateTracker = () => {
-                let count = 0;
-                document.querySelectorAll('.quiz-question-card').forEach(card => {
-                    let qNum = card.id.split('_')[1];
-                    let isDone = card.querySelector('input[type="radio"]:checked') ||
-                                 (card.querySelector('input[type="text"]') && card.querySelector('input[type="text"]').value.trim() !== '');
-                    let btn = document.getElementById('tracker_' + qNum);
-                    if(isDone) {
-                        btn.classList.replace('btn-outline-secondary', 'btn-success');
+            let count = 0;
+            document.querySelectorAll('.quiz-question-card').forEach(card => {
+                // Thay vì lấy ThuTu như trước, giờ ta lấy CauHoiId (GUID)
+                let qNum = card.id.split('question_')[1];
+                let isDone = false;
+
+                // Phần 1: chỉ check radio của trắc nghiệm (name^="q_")
+                let radioP1 = card.querySelector('input[type="radio"][name^="q_"]:checked');
+                if (radioP1) isDone = true;
+
+                // Phần 3: điền kết quả
+                let textInput = card.querySelector('input[type="text"][name^="dkq_"]');
+                if (textInput && textInput.value.trim() !== '') isDone = true;
+
+                // Phần 2: mệnh đề đúng/sai
+                let mdRadios = card.querySelectorAll('input[type="radio"][name^="md_"]');
+                if (mdRadios.length > 0) {
+                    let checked = card.querySelectorAll('input[type="radio"][name^="md_"]:checked');
+                    isDone = checked.length > 0;
+                }
+
+                let btn = document.getElementById('tracker_' + qNum);
+                if (btn) {
+                    if (isDone) {
+                        btn.classList.remove('btn-outline-secondary');
+                        btn.classList.add('btn-success');
                         count++;
+                    } else {
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-secondary');
                     }
-                });
-                if(answeredCountDisplay) answeredCountDisplay.innerText = count;
-            };
-            document.addEventListener('change', (e) => { if(e.target.matches('input')) updateTracker(); });
+                }
+            });
+            if (answeredCountDisplay) answeredCountDisplay.innerText = count;
+        };
+
+            document.addEventListener('change', (e) => {
+                if(e.target.matches('input[type="radio"]') || e.target.matches('input[type="text"]')) {
+                    updateTracker();
+                }
+            });
+            document.addEventListener('keyup', (e) => {
+                if(e.target.matches('input[type="text"]')) {
+                    updateTracker();
+                }
+            });
         });
     </script>
 }

@@ -28,11 +28,11 @@ namespace Elearning.Infrastructure.Repository
             var baseQuery = FilterData(
                 q => q.Include(x => x.NguoiDung)
                       .Include(x => x.LogViPhams)
-                      .Include(x => x.KyThi) // BỔ SUNG: Include KyThi để lấy thông tin Public/Môn học
-                                             // Không cần Include ChiTietBaiLam vì EF Core có thể tự đếm (Count) thông qua Select
-                      .Where(x => x.KyThiId == searchOption.KyThiId)
+                      .Include(x => x.KyThi)
+                      .Where(x => searchOption.KyThiId == Guid.Empty || x.KyThiId == searchOption.KyThiId)
+                      .Where(x => !searchOption.NguoiDungId.HasValue || x.NguoiDungId == searchOption.NguoiDungId.Value)
                       .Where(x => string.IsNullOrEmpty(searchOption.Keyword) ||
-                                  x.NguoiDung.Ten.Contains(searchOption.Keyword)), // Nếu có tìm theo Mã SV thì thêm logic Contains vào đây
+                                  x.NguoiDung.Ten.Contains(searchOption.Keyword)),
                 searchOption.gridRequest,
                 ref total);
 
@@ -41,21 +41,12 @@ namespace Elearning.Infrastructure.Repository
             {
                 Id = x.Id,
                 KyThiId = x.KyThiId,
-                TenKyThi = x.KyThi != null ? x.KyThi.TenKyThi : null,
-
-                // --- BỔ SUNG CÁC TRƯỜNG PHÂN LOẠI ĐỀ THI ---
+                TenKyThi = x.KyThi != null ? x.KyThi.TenKyThi : "Không xác định",
                 IsKyThiPublic = x.KyThi != null && x.KyThi.IsPublic,
-                MonHoc = (x.KyThi != null && x.KyThi.MonHoc.HasValue) ? x.KyThi.MonHoc.ToString() : null,
-
-                // --- BỔ SUNG TỔNG SỐ CÂU HỎI ---
-                TongSoCau = x.ChiTietBaiLams.Count(),
-
+                MonHoc = (x.KyThi != null && x.KyThi.MonHoc.HasValue) ? x.KyThi.MonHoc.ToString() : string.Empty,
+                TongSoCau = x.ChiTietBaiLams != null ? x.ChiTietBaiLams.Count() : 0,
                 NguoiDungId = x.NguoiDungId,
-                TenSinhVien = x.NguoiDung.Ten ?? "N/A",
-
-                // BỔ SUNG MÃ SINH VIÊN (Thay "UserName" bằng trường thực tế trong bảng NguoiDung của bạn, ví dụ "MaSinhVien")
-                //MaSinhVien = x.NguoiDung.Ten ?? "N/A",
-
+                TenSinhVien = x.NguoiDung != null ? (x.NguoiDung.Ten ?? "Không có tên") : "Học viên ẩn danh",
                 ThoiDiemBatDau = x.ThoiDiemBatDau,
                 ThoiDiemNop = x.ThoiDiemNop,
                 Diem = x.Diem,
@@ -63,8 +54,7 @@ namespace Elearning.Infrastructure.Repository
                 TrangThai = x.TrangThai,
                 Created = x.Created,
                 LastModified = x.LastModified,
-
-                TongSoLanViPham = x.LogViPhams.Count()
+                TongSoLanViPham = x.LogViPhams != null ? x.LogViPhams.Count() : 0
             });
 
             var items = await dtoQuery.ToListAsync();

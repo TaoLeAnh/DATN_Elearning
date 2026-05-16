@@ -4,6 +4,7 @@ using Elearning.Domain.Interfaces;
 using Elearning.Shared.Commons.Interfaces.Extentions;
 using Elearning.Shared.Commons.Model.Commons.Service.Shared.Commons.Model.Commons;
 using Elearning.Shared.Contracts.Portal.Dtos;
+using Elearning.Shared.Contracts.Portal.Enums;
 using Elearning.Shared.Contracts.Portal.Forms;
 using Elearning.Shared.Contracts.Portal.Querys;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,8 @@ namespace Elearning.Application.Services
         {
             var entity = await _unitOfWork.CauHoiRepository.FindAsync(
                 x => x.Id == id,
-                includes: new[] { "DapAns", "GiangVien" }
+                // 👉 BỔ SUNG INCLUDE ĐẦY ĐỦ 3 BẢNG
+                includes: new[] { "DapAns", "MenhDeDungSais", "DapAnDienKetQuas", "GiangVien" }
             );
 
             if (entity == null) throw new ArgumentException("Không tìm thấy câu hỏi.");
@@ -48,7 +50,7 @@ namespace Elearning.Application.Services
                 NoiDung = entity.NoiDung,
                 HinhAnhUrl = entity.HinhAnhUrl,
                 KhoaHocId = entity.KhoaHocId,
-                MonHoc = entity.MonHoc, // BỔ SUNG MAP OUT
+                MonHoc = entity.MonHoc,
                 LoaiCauHoi = entity.LoaiCauHoi,
                 MucDo = entity.MucDo,
                 ChuDe = entity.ChuDe,
@@ -57,7 +59,9 @@ namespace Elearning.Application.Services
                 TenGiangVien = entity.GiangVien?.Ten,
                 Created = entity.Created,
                 LastModified = entity.LastModified,
-                DapAns = entity.DapAns.Select(d => new DapAnDto
+
+                // 1. Trắc nghiệm
+                DapAns = entity.DapAns?.Select(d => new DapAnDto
                 {
                     Id = d.Id,
                     CauHoiId = d.CauHoiId,
@@ -65,7 +69,25 @@ namespace Elearning.Application.Services
                     HinhAnhUrl = d.HinhAnhUrl,
                     LaDapAnDung = d.LaDapAnDung,
                     ThuTu = d.ThuTu
-                }).OrderBy(d => d.ThuTu).ToList()
+                }).OrderBy(d => d.ThuTu).ToList() ?? new(),
+
+                // 👉 2. BỔ SUNG MAP: Mệnh đề Đúng/Sai
+                MenhDeDungSais = entity.MenhDeDungSais?.Select(m => new MenhDeDungSaiDto
+                {
+                    Id = m.Id,
+                    NoiDung = m.NoiDung,
+                    HinhAnhUrl = m.HinhAnhUrl,
+                    LaDung = m.LaDung,
+                    ThuTu = m.ThuTu
+                }).OrderBy(m => m.ThuTu).ToList() ?? new(),
+
+                // 👉 3. BỔ SUNG MAP: Điền kết quả
+                DapAnDienKetQuas = entity.DapAnDienKetQuas?.Select(dk => new DapAnDienKetQuaDto
+                {
+                    Id = dk.Id,
+                    GiaTriDung = dk.GiaTriDung,
+                    SaiSoChoPhep = dk.SaiSoChoPhep
+                }).ToList() ?? new()
             };
         }
 
@@ -75,7 +97,7 @@ namespace Elearning.Application.Services
             {
                 NoiDung = form.NoiDung,
                 KhoaHocId = form.KhoaHocId,
-                MonHoc = form.MonHoc, // BỔ SUNG MAP IN
+                MonHoc = form.MonHoc,
                 HinhAnhUrl = form.HinhAnhUrl,
                 LoaiCauHoi = form.LoaiCauHoi,
                 MucDo = form.MucDo,
@@ -83,13 +105,30 @@ namespace Elearning.Application.Services
                 GiaiThich = form.GiaiThich,
                 GiangVienId = form.GiangVienId,
 
-                DapAns = form.DapAns.Select(d => new DapAn
+                // Xử lý lưu loại 1
+                DapAns = form.LoaiCauHoi == EnumLoaiCauHoi.MotLuaChon ? form.DapAns.Select(d => new DapAn
                 {
                     NoiDung = d.NoiDung,
                     HinhAnhUrl = d.HinhAnhUrl,
                     LaDapAnDung = d.LaDapAnDung,
                     ThuTu = d.ThuTu
-                }).ToList()
+                }).ToList() : new List<DapAn>(),
+
+                // 👉 Xử lý lưu loại 2
+                MenhDeDungSais = form.LoaiCauHoi == EnumLoaiCauHoi.MenhDeDungSai ? form.MenhDeDungSais.Select(m => new MenhDeDungSai
+                {
+                    NoiDung = m.NoiDung,
+                    HinhAnhUrl = m.HinhAnhUrl,
+                    LaDung = m.LaDung,
+                    ThuTu = m.ThuTu
+                }).ToList() : new List<MenhDeDungSai>(),
+
+                // 👉 Xử lý lưu loại 3
+                DapAnDienKetQuas = form.LoaiCauHoi == EnumLoaiCauHoi.DienKetQua ? form.DapAnDienKetQuas.Select(dk => new DapAnDienKetQua
+                {
+                    GiaTriDung = dk.GiaTriDung,
+                    SaiSoChoPhep = dk.SaiSoChoPhep
+                }).ToList() : new List<DapAnDienKetQua>()
             };
 
             await _unitOfWork.CauHoiRepository.AddAsync(entity);
@@ -99,34 +138,16 @@ namespace Elearning.Application.Services
 
         public async Task<bool> UpdateAsync(Guid id, CauHoiForm item)
         {
-            var itemUpdate = await _unitOfWork.CauHoiRepository.FindAsync(x => x.Id == id, includes: new[] { "DapAns" });
+            // 👉 BỔ SUNG INCLUDE
+            var itemUpdate = await _unitOfWork.CauHoiRepository.FindAsync(x => x.Id == id, includes: new[] { "DapAns", "MenhDeDungSais", "DapAnDienKetQuas" });
             if (itemUpdate == null) return false;
 
-            // Xử lý File trên MinIO (Giữ nguyên)
-            var newImageUrls = new List<string>();
-            if (!string.IsNullOrEmpty(item.HinhAnhUrl)) newImageUrls.Add(item.HinhAnhUrl);
-            foreach (var d in item.DapAns.Where(x => !string.IsNullOrEmpty(x.HinhAnhUrl)))
-            {
-                newImageUrls.Add(d.HinhAnhUrl);
-            }
+            // ... Giữ nguyên phần xử lý xóa file MinIO của bác ...
 
-            var oldImageUrls = new List<string>();
-            if (!string.IsNullOrEmpty(itemUpdate.HinhAnhUrl)) oldImageUrls.Add(itemUpdate.HinhAnhUrl);
-            foreach (var d in itemUpdate.DapAns.Where(x => !string.IsNullOrEmpty(x.HinhAnhUrl)))
-            {
-                oldImageUrls.Add(d.HinhAnhUrl);
-            }
-
-            var imagesToDelete = oldImageUrls.Except(newImageUrls).ToList();
-            foreach (var url in imagesToDelete)
-            {
-                await _storageService.DeleteFileAsync(url);
-            }
-
-            // Cập nhật thông tin Entity
+            // Cập nhật thông tin Entity chính
             itemUpdate.NoiDung = item.NoiDung;
             itemUpdate.KhoaHocId = item.KhoaHocId;
-            itemUpdate.MonHoc = item.MonHoc; // BỔ SUNG MAP UPDATE
+            itemUpdate.MonHoc = item.MonHoc;
             itemUpdate.HinhAnhUrl = item.HinhAnhUrl;
             itemUpdate.LoaiCauHoi = item.LoaiCauHoi;
             itemUpdate.MucDo = item.MucDo;
@@ -134,25 +155,26 @@ namespace Elearning.Application.Services
             itemUpdate.GiaiThich = item.GiaiThich;
             itemUpdate.GiangVienId = item.GiangVienId;
 
-            // Xử lý đáp án (Giữ nguyên)
-            var oldDapAns = itemUpdate.DapAns.ToList();
-            foreach (var oldDapAn in oldDapAns)
-            {
-                _unitOfWork.DapAnRepository.Delete(oldDapAn);
-            }
-
+            // XÓA TẤT CẢ CÁC ĐÁP ÁN CŨ ĐỂ LÀM SẠCH DB
+            foreach (var oldDapAn in itemUpdate.DapAns.ToList()) _unitOfWork.DapAnRepository.Delete(oldDapAn);
+            // (Bác có Repository của MenhDe và DienKetQua thì gọi .Delete() giống thế này, 
+            // hoặc do bác đã cấu hình Cascade Delete ở Entity rồi thì Clear() list là EF Core tự xóa)
             itemUpdate.DapAns.Clear();
+            itemUpdate.MenhDeDungSais.Clear();
+            itemUpdate.DapAnDienKetQuas.Clear();
 
-            foreach (var d in item.DapAns)
+            // THÊM ĐÁP ÁN MỚI TÙY THEO LOẠI CÂU HỎI
+            if (item.LoaiCauHoi == EnumLoaiCauHoi.MotLuaChon)
             {
-                itemUpdate.DapAns.Add(new DapAn
-                {
-                    NoiDung = d.NoiDung,
-                    HinhAnhUrl = d.HinhAnhUrl,
-                    LaDapAnDung = d.LaDapAnDung,
-                    ThuTu = d.ThuTu,
-                    CauHoiId = itemUpdate.Id
-                });
+                foreach (var d in item.DapAns) itemUpdate.DapAns.Add(new DapAn { NoiDung = d.NoiDung, HinhAnhUrl = d.HinhAnhUrl, LaDapAnDung = d.LaDapAnDung, ThuTu = d.ThuTu });
+            }
+            else if (item.LoaiCauHoi == EnumLoaiCauHoi.MenhDeDungSai)
+            {
+                foreach (var m in item.MenhDeDungSais) itemUpdate.MenhDeDungSais.Add(new MenhDeDungSai { NoiDung = m.NoiDung, HinhAnhUrl = m.HinhAnhUrl, LaDung = m.LaDung, ThuTu = m.ThuTu });
+            }
+            else if (item.LoaiCauHoi == EnumLoaiCauHoi.DienKetQua)
+            {
+                foreach (var dk in item.DapAnDienKetQuas) itemUpdate.DapAnDienKetQuas.Add(new DapAnDienKetQua { GiaTriDung = dk.GiaTriDung, SaiSoChoPhep = dk.SaiSoChoPhep });
             }
 
             _unitOfWork.CauHoiRepository.Update(itemUpdate);

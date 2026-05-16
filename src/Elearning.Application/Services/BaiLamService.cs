@@ -21,8 +21,9 @@ namespace Elearning.Application.Services
         }
         public async Task<DataTableJson> GetPagedAdminAsync(BaiLamQuery searchOption)
         {
-            if (searchOption.KyThiId == Guid.Empty)
-                throw new ArgumentException("Yêu cầu cung cấp Mã kỳ thi (KyThiId) để xem danh sách.");
+            // 👉 ĐÃ SỬA: Cho phép KyThiId rỗng NẾU đang tìm theo NguoiDungId (để lấy lịch sử)
+            if (searchOption.KyThiId == Guid.Empty && !searchOption.NguoiDungId.HasValue)
+                throw new ArgumentException("Yêu cầu cung cấp Mã kỳ thi hoặc Mã người dùng để xem danh sách.");
 
             var (items, total) = await _unitOfWork.BaiLamRepository.GetPagedDtoAsync(searchOption);
 
@@ -137,6 +138,23 @@ namespace Elearning.Application.Services
             }
 
             return reviewDto;
+        }
+        public async Task<bool> DuyetBaiLamAsync(Guid baiLamId)
+        {
+            var baiLam = await _unitOfWork.BaiLamRepository.GetByIdAsync(baiLamId);
+            if (baiLam == null)
+                throw new ArgumentException("Không tìm thấy bài làm.");
+
+            if (baiLam.TrangThai == EnumTrangThaiBaiLam.DaNop)
+            {
+                baiLam.TrangThai = EnumTrangThaiBaiLam.DaCham; // Đổi sang Đã chấm
+                _unitOfWork.BaiLamRepository.Update(baiLam);
+                await _unitOfWork.CompleteAsync();
+
+                return true;
+            }
+
+            throw new ArgumentException("Bài làm chưa nộp hoặc đã được duyệt rồi.");
         }
     }
 }

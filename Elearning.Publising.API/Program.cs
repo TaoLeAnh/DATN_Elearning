@@ -3,6 +3,7 @@ using Elearning.Publising.Application;
 using Elearning.Publising.Infrastructure;
 using Elearning.Shared.Commons.Extensions;
 using Elearning.Shared.Commons.Interfaces.Extentions;
+using Elearning.Shared.Commons.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -19,6 +20,7 @@ builder.Services.AddControllers()
 // Đăng ký tầng Application & Infrastructure
 builder.Services.AddServicesDependencies(builder.Configuration);
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+builder.Services.AddHttpClient<IAIService, AIService>();
 builder.Services.AddInfrustructureDependencies(builder.Configuration);
 
 // ================================================================

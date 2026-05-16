@@ -20,18 +20,20 @@
         <FluentSearch style="width:300px" Placeholder="Tìm mã hoặc tên sinh viên..." @bind-Value="@SearchKeyword" @bind-Value:after=HandleSearchChanged />
     </FluentStack>
 
-    <FluentDataGrid ShowHover="true" 
-                    @ref="Grid" 
-                    TGridItem="BaiLamDto" 
-                    ItemsProvider="LoadDatas" 
-                    GridTemplateColumns="5% 20% 30% 15% 15% 15%" 
-                    RowSize="DataGridRowSize.Large" 
-                    Style="width:100%;" 
+    <FluentDataGrid ShowHover="true"
+                    @ref="Grid"
+                    TGridItem="BaiLamDto"
+                    ItemsProvider="LoadDatas"
+                    GridTemplateColumns="5% 25% 20% 12% 13% 10% 15%"
+                    RowSize="DataGridRowSize.Large"
+                    Style="width:100%;"
                     Pagination="@pagination">
 
         <TemplateColumn Title="#" Sortable="false">@context.STT</TemplateColumn>
-        
-        <PropertyColumn Title="Họ và Tên" Property="@(c => c.TenSinhVien)" Sortable="true" SortBy="@_roleTenSVSort" />
+
+        <TemplateColumn Title="Họ và Tên" Sortable="true" SortBy="@_roleTenSVSort">
+                @context.TenSinhVien
+        </TemplateColumn>
 
         <TemplateColumn Title="Thời gian thi" Sortable="false">
             <div style="font-size: 0.85em;">
@@ -48,11 +50,15 @@
         </TemplateColumn>
 
         <TemplateColumn Title="Điểm số" Sortable="true">
-            @if (context.TrangThai == EnumTrangThaiBaiLam.DaCham)
+            @if (context.TrangThai == EnumTrangThaiBaiLam.DaCham || context.TrangThai == EnumTrangThaiBaiLam.DaNop)
             {
                 <div style="font-weight: bold; font-size: 1.1em; color: #0078d4;">
                     @context.Diem.ToString("0.##") <span style="font-size: 0.8em; font-weight: normal; color: gray;">(@context.SoCauDung đúng)</span>
                 </div>
+                @if (context.TrangThai == EnumTrangThaiBaiLam.DaNop)
+                {
+                    <div style="font-size: 0.75em; color: #f57c00; font-style: italic;">(Điểm tạm tính - Chờ duyệt)</div>
+                }
             }
             else
             {
@@ -88,6 +94,14 @@
 
         <TemplateColumn Title="Thao tác" Align="Align.End">
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+
+                @if (context.TrangThai == EnumTrangThaiBaiLam.DaNop)
+                {
+                    <FluentButton Appearance="Appearance.Stealth" Title="Duyệt bài (Chuyển sang Đã Chấm)" OnClick="@(() => DuyetBaiLam(context.Id))">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.CheckmarkCircle())" Color="Color.Success" />
+                    </FluentButton>
+                }
+
                 <FluentButton Appearance="Appearance.Stealth" Title="Xem chi tiết bài làm" OnClick="@(() => ViewReview(context.Id))" Disabled="@(context.TrangThai == EnumTrangThaiBaiLam.DangLam)">
                     <FluentIcon Value="@(new Icons.Regular.Size16.Eye())" Color="Color.Accent" />
                 </FluentButton>
@@ -103,3 +117,38 @@
     </FluentDataGrid>
     <Paginator PaginationState="@pagination" SelectedPageSizeChanged="RefreshData" />
 </FluentStack>
+
+@* POPUP LỊCH SỬ BÀI LÀM CỦA SINH VIÊN *@
+<FluentDialog @bind-Hidden="@_hideHistoryDialog" Modal="true" TrapFocus="true" Style="width: 800px; height: 600px;">
+    <FluentDialogHeader ShowDismiss="true">
+        <FluentStack VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.History())" />
+            <FluentLabel Typography="Typography.PaneHeader">
+                Lịch sử làm bài: <b>@_historyStudentName</b>
+            </FluentLabel>
+        </FluentStack>
+    </FluentDialogHeader>
+    <FluentDialogBody>
+        @if (_isLoadingHistory)
+        {
+            <div style="text-align:center; padding: 50px;"><FluentProgressRing /></div>
+        }
+        else if (!_userHistory.Any())
+        {
+            <div style="text-align:center; color:gray; padding: 20px;">Học viên này chưa có lịch sử làm bài nào.</div>
+        }
+        else
+        {
+            <FluentDataGrid Items="@_userHistory.AsQueryable()" Style="width: 100%;">
+                <PropertyColumn Title="Tên Kỳ thi" Property="@(c => c.TenKyThi)" />
+                <PropertyColumn Title="Bắt đầu" Property="@(c => c.ThoiDiemBatDau.ToString("dd/MM/yyyy HH:mm"))" />
+                <PropertyColumn Title="Nộp bài" Property="@(c => c.ThoiDiemNop.HasValue ? c.ThoiDiemNop.Value.ToString("dd/MM/yyyy HH:mm") : "-")" />
+                <PropertyColumn Title="Trạng thái" Property="@(c => c.TrangThai.GetDescription())" />
+                <PropertyColumn Title="Điểm" Property="@(c => c.Diem)" Style="font-weight:bold; color:blue;" />
+            </FluentDataGrid>
+        }
+    </FluentDialogBody>
+    <FluentDialogFooter>
+        <FluentButton Appearance="Appearance.Neutral" OnClick="@(() => _hideHistoryDialog = true)">Đóng</FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>

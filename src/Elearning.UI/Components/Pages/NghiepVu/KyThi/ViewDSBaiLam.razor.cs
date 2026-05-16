@@ -6,6 +6,10 @@ using Elearning.Shared.Contracts.Portal.Dtos.KyThi;
 using Elearning.Shared.Contracts.Portal.Querys.KyThi;
 using Microsoft.AspNetCore.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Elearning.UI.Components.Pages.NghiepVu.KyThi
 {
@@ -17,6 +21,9 @@ namespace Elearning.UI.Components.Pages.NghiepVu.KyThi
         [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
         [Inject] private NavigationManager NavManager { get; set; } = default!;
 
+        // 👉 Đã thêm Inject cho DialogService để dùng thông báo xác nhận
+        [Inject] private IDialogService DialogService { get; set; } = default!;
+
         protected string? SearchKeyword { get; set; } = string.Empty;
 
         // Setup sort theo Mã SV và Tên SV
@@ -25,6 +32,14 @@ namespace Elearning.UI.Components.Pages.NghiepVu.KyThi
 
         protected FluentDataGrid<BaiLamDto> Grid { get; set; } = default!;
         protected PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+        // ==========================================
+        // CÁC BIẾN QUẢN LÝ POPUP LỊCH SỬ HỌC VIÊN
+        // ==========================================
+        protected bool _hideHistoryDialog = true;
+        protected bool _isLoadingHistory = false;
+        protected string _historyStudentName = string.Empty;
+        protected List<BaiLamDto> _userHistory = new();
 
         private async ValueTask<GridItemsProviderResult<BaiLamDto>> LoadDatas(GridItemsProviderRequest<BaiLamDto> request)
         {
@@ -52,7 +67,7 @@ namespace Elearning.UI.Components.Pages.NghiepVu.KyThi
 
         protected async Task HandleSearchChanged() => await Grid.RefreshDataAsync();
 
-        private async Task RefreshData(int value)
+        protected async Task RefreshData(int value)
         {
             pagination.ItemsPerPage = value;
             await pagination.SetCurrentPageIndexAsync(0);
@@ -67,6 +82,78 @@ namespace Elearning.UI.Components.Pages.NghiepVu.KyThi
         protected void GoBack()
         {
             NavManager.NavigateTo("/nghiep-vu/quan-ly-ky-thi");
+        }
+
+        // ==========================================
+        // HÀM MỞ POPUP & LẤY LỊCH SỬ HỌC VIÊN
+        // ==========================================
+        protected async Task ShowUserHistory(Guid userId, string studentName)
+        {
+            _historyStudentName = studentName;
+            _hideHistoryDialog = false;
+            _isLoadingHistory = true;
+            StateHasChanged();
+
+            var apiRequest = new ApiRequestModel { ApiService = ServicesRegistryEnum.ServicePortal, Endpoint = "/BaiLam/getpaged-admin", HasAuthorization = true };
+
+            // Lọc tất cả bài làm của học viên này
+            var query = new BaiLamQuery
+            {
+                NguoiDungId = userId, // 👉 Đừng quên thêm biến NguoiDungId vào class BaiLamQuery ở dưới Backend nhé!
+                draw = 1,
+                gridRequest = new GridRequest { page = 1, pageSize = 50 }
+            };
+
+            var result = await CallService.Post<DataTableJson<BaiLamDto>>(apiRequest, query);
+
+            if (result.Status == StatusCode.OK && result.Data != null)
+            {
+                _userHistory = result.Data.Data.ToList();
+            }
+            else
+            {
+                _userHistory = new List<BaiLamDto>();
+                ToastService.ShowError("Lỗi khi tải lịch sử học viên.");
+            }
+
+            _isLoadingHistory = false;
+            StateHasChanged();
+        }
+
+        // ==========================================
+        // HÀM DUYỆT BÀI THI
+        // ==========================================
+        protected async Task DuyetBaiLam(Guid baiLamId)
+        {
+            // 👉 ĐÃ SỬA LẠI ĐÚNG THỨ TỰ THAM SỐ: message, primaryText, secondaryText, title
+            var dialog = await DialogService.ShowConfirmationAsync(
+                "Bạn có chắc chắn duyệt bài thi này? Sau khi duyệt học viên sẽ có thể xem được điểm số.",
+                "Đồng ý",
+                "Hủy",
+                "Xác nhận duyệt"
+            );
+
+            var result = await dialog.Result;
+            if (!result.Cancelled)
+            {
+                var req = new ApiRequestModel
+                {
+                    ApiService = ServicesRegistryEnum.ServicePortal,
+                    Endpoint = $"/BaiLam/{baiLamId}/duyet",
+                    HasAuthorization = true
+                };
+
+                var res = await CallService.Put(req, null);
+                if (res.Status == StatusCode.OK)
+                {
+                    ToastService.ShowSuccess("Đã duyệt bài thành công!");
+                    await Grid.RefreshDataAsync();
+                }
+                else
+                {
+                    ToastService.ShowError("Duyệt bài thất bại: " + res.Message);
+                }
+            }
         }
     }
 }

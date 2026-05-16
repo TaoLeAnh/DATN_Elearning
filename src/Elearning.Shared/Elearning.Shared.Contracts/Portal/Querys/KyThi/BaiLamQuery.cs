@@ -12,5 +12,6 @@ namespace Elearning.Shared.Contracts.Portal.Querys.KyThi
 
         // Tuỳ chọn: Lọc theo trạng thái (Ví dụ chỉ xem những đứa đã nộp)
         public int? TrangThai { get; set; }
+        public Guid? NguoiDungId { get; set; }
     }
 }

@@ -211,6 +211,35 @@ namespace Elearning.Publising.UI.Pages
             return new JsonResult(new { success = false, message = "Có lỗi xảy ra từ máy chủ khi nộp bài." });
         }
 
+        public class ChatbotApiResponse
+        {
+            public bool success { get; set; }
+            public string reply { get; set; }
+        }
+
+        public async Task<IActionResult> OnPostAskTutorAsync([FromBody] ChatbotRequestDto payload)
+        {
+            if (payload == null || string.IsNullOrWhiteSpace(payload.UserMessage))
+                return new JsonResult(new { success = false, reply = "Bạn chưa nhập câu hỏi." });
+
+            var apiRequest = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePublising,
+                Endpoint = "/Publising/Chatbot/ask-tutor",
+                HasAuthorization = false
+            };
+
+            var response = await _callService.Post<ChatbotApiResponse>(apiRequest, payload);
+
+            if (response.Status == Elearning.Shared.Commons.Model.ServiceCustomHttpClient.StatusCode.OK && response.Data != null)
+            {
+                // Trả kết quả về lại cho Javascript
+                return new JsonResult(new { success = response.Data.success, reply = response.Data.reply });
+            }
+
+            return new JsonResult(new { success = false, reply = "Xin lỗi, không thể kết nối đến não bộ AI lúc này." });
+        }
+
         private string GetYoutubeEmbedUrl(string url)
         {
             if (string.IsNullOrEmpty(url)) return url;

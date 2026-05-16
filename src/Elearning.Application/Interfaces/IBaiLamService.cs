@@ -11,5 +11,6 @@ namespace Elearning.Application.Interfaces
     {
         Task<DataTableJson> GetPagedAdminAsync(BaiLamQuery searchOption);
         Task<BaiLamReviewDto> GetChiTietBaiLamAsync(Guid baiLamId);
+        Task<bool> DuyetBaiLamAsync(Guid baiLamId);
     }
 }

@@ -21,12 +21,4 @@ namespace Elearning.Shared.Contracts.Portal.Dtos
         public List<MenhDeDungSaiDto> MenhDeDungSais { get; set; } = new List<MenhDeDungSaiDto>();
         public List<DapAnDienKetQuaDto> DapAnDienKetQuas { get; set; } = new List<DapAnDienKetQuaDto>();
     }
-    public class MenhDeDungSaiDto : BaseEntiyDto
-    { 
-        public string NoiDung { get; set; } = default!;
-        public int ThuTu { get; set; } 
-    }
-    public class DapAnDienKetQuaDto : BaseEntiyDto
-    {
-    }
 }

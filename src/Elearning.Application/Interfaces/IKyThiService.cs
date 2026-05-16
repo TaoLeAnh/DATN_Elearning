@@ -24,5 +24,7 @@ namespace Elearning.Application.Interfaces
         Task<bool> SaveCauHinhDeThiAsync(Guid kyThiId, CauHinhDeThiForm form);
 
         Task<bool> GenerateRandomExamAsync(Guid kyThiId, MaTranDeThiForm maTran);
+        Task<bool> GenerateRandomExamTheoMaTranAsync(Guid kyThiId, Guid maTranId);
+        Task<bool> GenerateRandomExamAsyncV2(Guid kyThiId, MaTranDeThiForm maTran);
     }
 }

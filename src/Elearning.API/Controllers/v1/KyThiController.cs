@@ -93,5 +93,34 @@ namespace Elearning.API.Controllers.v1
                 return BadRequest(ex.Message);
             }
         }
+        // Thêm class này ở đầu file hoặc ném vào folder DTO
+        public class RandomTheoMaTranRequest
+        {
+            public Guid KyThiId { get; set; }
+            public Guid MaTranId { get; set; }
+        }
+
+        [HttpPost("random-theo-matran")]
+        public async Task<IActionResult> RandomTheoMaTran([FromBody] RandomTheoMaTranRequest request)
+        {
+            try
+            {
+                var success = await _service.GenerateRandomExamTheoMaTranAsync(request.KyThiId, request.MaTranId);
+
+                if (!success)
+                {
+                    // Trả về Object JSON để Frontend map được vào ResponseErrorAPI
+                    return BadRequest(new { Message = "Lỗi không xác định khi tạo đề thi." });
+                }
+
+                // Trả về true cho trường hợp Success
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                // Trả về Object JSON chứa câu thông báo lỗi
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
     }
 }

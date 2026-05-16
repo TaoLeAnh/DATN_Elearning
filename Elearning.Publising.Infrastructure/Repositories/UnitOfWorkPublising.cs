@@ -1,5 +1,6 @@
 ﻿using Elearning.Domain.Interfaces;
 using Elearning.Domain.Interfaces.MSSQL;
+using Elearning.Infrastructure.Repository;
 using Elearning.Publising.Infrastructure.Persistence.Context;
 using Elearning.Publising.Infrastructure.Repositories.Bases;
 using Elearning.Shared.Commons.Interfaces.Extentions;
@@ -26,7 +27,8 @@ namespace Elearning.Publising.Infrastructure.Repositories
         public IMaTranDeThiMacDinhRepository? _maTranDeThiMacDinhRepository;
         public IHoSoGiaoVienRepository? _hoSoGiaoVienRepository;
         public IDangKyKhoaHocRepository? _dangKyKhoaHocRepository;
-
+        public IChiTietBaiLamRepository? _chiTietBaiLamRepository;
+        public IBaiHocRepository? _baiHocRepository;
         public UnitOfWorkPublising(AppDbContext context, IRequestContext requestContext)
            : base(context, requestContext)
         {
@@ -70,6 +72,12 @@ namespace Elearning.Publising.Infrastructure.Repositories
             _hoSoGiaoVienRepository ??= new HoSoGiaoVienRepository(_context);
 
         public IDangKyKhoaHocRepository DangKyKhoaHocRepository =>
-            _dangKyKhoaHocRepository ??= new DangKyKhoaHocRepository(_context); 
+            _dangKyKhoaHocRepository ??= new DangKyKhoaHocRepository(_context);
+
+        public IChiTietBaiLamRepository ChiTietBaiLamRepository =>
+            _chiTietBaiLamRepository ??= new ChiTietBaiLamRepository(_context);
+
+        public IBaiHocRepository BaiHocRepository =>
+            _baiHocRepository ??= new BaiHocRepository(_context);
     }
 }

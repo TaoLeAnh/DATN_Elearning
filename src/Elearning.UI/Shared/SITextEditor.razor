@@ -1,9 +1,4 @@
-﻿@using System.Text.Json
-@using Elearning.Shared.Commons.Extensions
-@using Elearning.Shared.Commons.Model.Commons
-@using Microsoft.JSInterop
-
-
+﻿@using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject IConfiguration configuration
 
@@ -17,57 +12,28 @@
                        @bind-Value="@NoiDungBienTap"
                        @bind-Value:after="async () => await OnValueChanged(NoiDungBienTap)" />
 
-
 @code {
-    [Parameter]
-    public string? Input { set; get; }
+    [Parameter] public string? Input { set; get; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public EventCallback<string> OnChange { get; set; }
+
     public string? NoiDungBienTap { set; get; }
-    [CascadingParameter]
-    public CurrentUserDto CurrentUser { get; set; } = new();
 
-    private string _siToken = string.Empty;
-    private string keyASE = string.Empty;
-    private string Domain = string.Empty;
-    private string BucketS3 = string.Empty;
-
-    protected override void OnInitialized()
-    {
-        // Lấy cấu hình một lần
-        // keyASE = configuration["MediaService:KeyAESCrypto"] ?? throw new ArgumentNullException("MediaService:KeyAESCrypto not found");
-        // Domain = configuration["MediaService:Domain"] ?? throw new ArgumentNullException("MediaService:Domain not found");
-        // BucketS3 = configuration["MediaService:BucketS3"] ?? throw new ArgumentNullException("MediaService:BucketS3 not found");
-
-        // Lấy cấu hình một lần (Tạm thời cấp giá trị mặc định nếu cấu hình trống để test)
-        keyASE = configuration["MediaService:KeyAESCrypto"] ?? "12345678901234567890123456789012"; // AES cần key đủ độ dài
-        Domain = configuration["MediaService:Domain"] ?? "https://dummy-media.com";
-        BucketS3 = configuration["MediaService:BucketS3"] ?? "dummy-bucket";
-        base.OnInitialized();
-    }
-
+    // 👉 ĐÂY LÀ CHÌA KHÓA: Nạp dữ liệu từ Input vào NoiDungBienTap khi component khởi tạo
     protected override void OnParametersSet()
     {
-        NoiDungBienTap = Input;
+        if (NoiDungBienTap != Input)
+        {
+            NoiDungBienTap = Input;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            var payload = new
-            {
-                BucketName = BucketS3,
-                UserName = CurrentUser.UserName,
-                UserId = CurrentUser.UserId,
-                ExpireAt = DateTime.UtcNow.AddMinutes(15)
-            };
-            var json = JsonSerializer.Serialize(payload);
-            _siToken = AESCrypto.Encrypt(json, keyASE, true);
-            await JS.InvokeVoidAsync("CNamespace.setUploadConfig", Domain, _siToken);
-
-            await JS.InvokeVoidAsync("CNamespace.setPickerUrl", Domain);
-            await JS.InvokeVoidAsync("CNamespace.setToken", _siToken);
+            var apiUrl = configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7160";
+            await JS.InvokeVoidAsync("CNamespace.setUploadConfig", apiUrl, "");
         }
     }
 

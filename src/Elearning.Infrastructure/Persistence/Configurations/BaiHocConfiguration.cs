@@ -23,6 +23,10 @@ namespace Elearning.Infrastructure.Persistence.Configurations
                 .HasColumnType("nvarchar(max)")
                 .IsRequired(false);
 
+            builder.Property(x => x.TaiLieuAI)
+                .HasColumnType("nvarchar(max)")
+                .IsRequired(false);
+
             builder.Property(x => x.VideoUrl)
                 .HasMaxLength(500)
                 .IsRequired(false);

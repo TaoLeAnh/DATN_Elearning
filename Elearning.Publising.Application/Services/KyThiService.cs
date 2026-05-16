@@ -4,6 +4,7 @@ using Elearning.Publising.Application.Interfaces;
 using Elearning.Shared.Commons.Extensions;
 using Elearning.Shared.Commons.Interfaces.Extentions;
 using Elearning.Shared.Contracts.Portal.Dtos;
+using Elearning.Shared.Contracts.Portal.Dtos.KyThi;
 using Elearning.Shared.Contracts.Portal.Enums;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -167,6 +168,10 @@ namespace Elearning.Publising.Application.Services
                     CauHoiId = ch.CauHoiId,
                     NoiDungCauHoi = ch.CauHoi.NoiDung,
                     HinhAnhUrlCauHoi = ch.CauHoi.HinhAnhUrl,
+
+                    // 👉 THÊM ĐÚNG DÒNG NÀY ĐỂ UI BIẾT ĐƯỜNG MÀ CHIA 3 PHẦN NÈ BÁC:
+                    LoaiCauHoi = ch.CauHoi.LoaiCauHoi,
+
                     DapAns = ch.CauHoi.DapAns.Select(d => new DapAnDto { Id = d.Id, NoiDung = d.NoiDung, HinhAnhUrl = d.HinhAnhUrl, ThuTu = d.ThuTu }).ToList(),
                     MenhDeDungSais = ch.CauHoi.MenhDeDungSais.Select(m => new MenhDeDungSaiDto { Id = m.Id, NoiDung = m.NoiDung, ThuTu = m.ThuTu }).ToList(),
                     DapAnDienKetQuas = ch.CauHoi.DapAnDienKetQuas.Select(dk => new DapAnDienKetQuaDto { Id = dk.Id }).ToList()
@@ -221,8 +226,11 @@ namespace Elearning.Publising.Application.Services
             var kyThi = await _UnitOfWork.KyThiRepository.GetByIdAsync(payload.BoCauHoiId);
             if (kyThi == null) return 0;
 
+            // Phải Include cả MenhDe và DienKetQua để chấm điểm
             var cauHois = await _UnitOfWork.CauHoiKyThiRepository.GetTableNoTracking()
                 .Include(x => x.CauHoi).ThenInclude(c => c.DapAns)
+                .Include(x => x.CauHoi).ThenInclude(c => c.MenhDeDungSais)
+                .Include(x => x.CauHoi).ThenInclude(c => c.DapAnDienKetQuas)
                 .Where(x => x.KyThiId == payload.BoCauHoiId)
                 .ToListAsync();
 
@@ -230,55 +238,129 @@ namespace Elearning.Publising.Application.Services
             int tongSoCau = cauHois.Count;
             if (tongSoCau == 0) return 0;
 
-            // Chấm điểm cơ bản (Câu hỏi trắc nghiệm 1 lựa chọn)
+            // TÍNH ĐIỂM FULL 3 PHẦN THI
             foreach (var cauHoiThi in cauHois)
             {
                 var traLoi = payload.DanhSachTraLoi.FirstOrDefault(x => x.CauHoiId == cauHoiThi.CauHoiId);
                 if (traLoi == null) continue;
 
-                var dapAnDung = cauHoiThi.CauHoi.DapAns.FirstOrDefault(x => x.LaDapAnDung);
-                if (dapAnDung != null && traLoi.DapAnId == dapAnDung.Id)
+                if (cauHoiThi.PhanThi == EnumLoaiPhanThi.TracNghiem)
                 {
-                    soCauDung++;
+                    var dapAnDung = cauHoiThi.CauHoi.DapAns.FirstOrDefault(x => x.LaDapAnDung);
+                    if (dapAnDung != null && traLoi.DapAnId == dapAnDung.Id)
+                        soCauDung++;
+                }
+                else if (cauHoiThi.PhanThi == EnumLoaiPhanThi.MenhDeDungSai)
+                {
+                    int soYChinhXac = 0;
+                    foreach (var md in cauHoiThi.CauHoi.MenhDeDungSais)
+                    {
+                        var luaChonSV = traLoi.MenhDes.FirstOrDefault(x => x.MenhDeId == md.Id);
+                        if (luaChonSV != null && luaChonSV.LuaChonCuaHocVien == md.LaDung)
+                            soYChinhXac++;
+                    }
+                    if (soYChinhXac == cauHoiThi.CauHoi.MenhDeDungSais.Count && soYChinhXac > 0)
+                        soCauDung++;
+                }
+                else if (cauHoiThi.PhanThi == EnumLoaiPhanThi.DienKetQua)
+                {
+                    var dapAnDung = cauHoiThi.CauHoi.DapAnDienKetQuas.FirstOrDefault();
+                    if (dapAnDung != null && traLoi.GiaTriNhap.HasValue)
+                    {
+                        float saiSo = Math.Abs(traLoi.GiaTriNhap.Value - dapAnDung.GiaTriDung);
+                        if (saiSo <= dapAnDung.SaiSoChoPhep)
+                            soCauDung++;
+                    }
                 }
             }
 
+            // Công thức tính điểm hệ 10
             float diem = (float)Math.Round(((double)soCauDung / tongSoCau) * 10, 2);
 
-            if (payload.UserId != Guid.Empty)
+            // ==============================================================
+            // XỬ LÝ LƯU DATABASE (CHỐNG LỖI MẤT SESSION VÀ LƯU CHI TIẾT BÀI LÀM)
+            // ==============================================================
+            BaiLam baiLam = null;
+
+            // 1. Tìm Bài làm theo ID JS gửi lên
+            // 1. Tìm Bài làm theo ID JS gửi lên
+            if (payload.BaiLamId != Guid.Empty)
             {
-                // TÌM LẠI BẢN GHI BÀI LÀM ĐANG THI DỞ
-                var baiLam = await _UnitOfWork.BaiLamRepository.GetTableNoTracking()
-                    .Where(x => x.KyThiId == kyThi.Id && x.NguoiDungId == payload.UserId && x.TrangThai != EnumTrangThaiBaiLam.DaNop)
+                // 👉 ĐỔI GetTable() THÀNH GetTableNoTracking()
+                baiLam = await _UnitOfWork.BaiLamRepository.GetTableNoTracking()
+                    .Include(x => x.ChiTietBaiLams)
+                    .FirstOrDefaultAsync(x => x.Id == payload.BaiLamId);
+            }
+
+            // 2. DỰ PHÒNG CHỐNG LỖI: Nếu JS mất BaiLamId (do F5 trang), tìm bài thi Đang Làm của User này
+            if (baiLam == null && payload.UserId != Guid.Empty)
+            {
+                // 👉 ĐỔI GetTable() THÀNH GetTableNoTracking()
+                baiLam = await _UnitOfWork.BaiLamRepository.GetTableNoTracking()
+                    .Include(x => x.ChiTietBaiLams)
+                    .Where(x => x.KyThiId == kyThi.Id && x.NguoiDungId == payload.UserId && x.TrangThai == EnumTrangThaiBaiLam.DangLam)
                     .OrderByDescending(x => x.ThoiDiemBatDau)
                     .FirstOrDefaultAsync();
-
-                if (baiLam != null)
-                {
-                    baiLam.Diem = diem;
-                    baiLam.SoCauDung = soCauDung;
-                    baiLam.ThoiDiemNop = DateTime.Now;
-                    baiLam.TrangThai = EnumTrangThaiBaiLam.DaNop; // ĐÃ FIX
-
-                    _UnitOfWork.BaiLamRepository.Update(baiLam);
-                }
-                else
-                {
-                    baiLam = new BaiLam
-                    {
-                        KyThiId = kyThi.Id,
-                        NguoiDungId = payload.UserId,
-                        Diem = diem,
-                        SoCauDung = soCauDung,
-                        ThoiDiemBatDau = DateTime.Now.AddMinutes(-kyThi.ThoiLuongPhut),
-                        ThoiDiemNop = DateTime.Now,
-                        TrangThai = EnumTrangThaiBaiLam.DaNop // ĐÃ FIX
-                    };
-                    await _UnitOfWork.BaiLamRepository.AddAsync(baiLam);
-                }
-
-                await _UnitOfWork.CompleteAsync();
             }
+
+            // 3. NẾU VẪN KHÔNG TÌM THẤY -> Tạo mới tinh (Trường hợp gọi thẳng API không qua nút Bắt đầu)
+            bool isCreateNew = false;
+            if (baiLam == null)
+            {
+                baiLam = new BaiLam
+                {
+                    KyThiId = kyThi.Id,
+                    NguoiDungId = payload.UserId, // ĐẢM BẢO LUÔN CÓ TÊN NGƯỜI NỘP
+                    ThoiDiemBatDau = DateTime.Now.AddMinutes(-kyThi.ThoiLuongPhut)
+                };
+                isCreateNew = true;
+            }
+
+            // 4. Cập nhật Điểm số & Trạng thái
+            baiLam.Diem = diem;
+            baiLam.SoCauDung = soCauDung;
+            baiLam.ThoiDiemNop = DateTime.Now;
+            baiLam.TrangThai = EnumTrangThaiBaiLam.DaNop; // Chờ duyệt
+
+            // 5. Làm sạch đáp án cũ (nếu có thi lại/nộp đè)
+            if (!isCreateNew && baiLam.ChiTietBaiLams.Any())
+            {
+                baiLam.ChiTietBaiLams.Clear();
+            }
+
+            // 6. LƯU TỪNG CÂU TRẢ LỜI CỦA SINH VIÊN VÀO BẢNG CHITIETBAILAM
+            foreach (var traLoi in payload.DanhSachTraLoi)
+            {
+                var chiTiet = new ChiTietBaiLam
+                {
+                    CauHoiId = traLoi.CauHoiId,
+                    DapAnId = traLoi.DapAnId,
+                    GiaTriNhap = traLoi.GiaTriNhap
+                };
+
+                // Nếu là Phần 2 (Mệnh đề Đúng/Sai), phải lưu vào List con
+                if (traLoi.MenhDes != null && traLoi.MenhDes.Any())
+                {
+                    foreach (var md in traLoi.MenhDes)
+                    {
+                        chiTiet.ChiTietTraLoiMenhDes.Add(new ChiTietTraLoiMenhDe
+                        {
+                            MenhDeDungSaiId = md.MenhDeId,
+                            LuaChonCuaHocVien = md.LuaChonCuaHocVien
+                        });
+                    }
+                }
+
+                baiLam.ChiTietBaiLams.Add(chiTiet);
+            }
+
+            // 7. Hoàn tất giao dịch
+            if (isCreateNew)
+                await _UnitOfWork.BaiLamRepository.AddAsync(baiLam);
+            else
+                _UnitOfWork.BaiLamRepository.Update(baiLam);
+
+            await _UnitOfWork.CompleteAsync();
 
             return diem;
         }
@@ -307,6 +389,128 @@ namespace Elearning.Publising.Application.Services
                 MonHocEnum.Toan => 90,  // Toán thi trắc nghiệm 90 phút
                 _ => 50                    // Tất cả các môn trắc nghiệm còn lại 50 phút
             };
+        }
+        public async Task<List<BaiLamDto>> GetMyExamsAsync(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("Không có ID người dùng");
+
+            // Chỉ lấy những bài đã được Giảng viên Duyệt (DaCham)
+            var query = await _UnitOfWork.BaiLamRepository.GetTableNoTracking()
+                .Include(x => x.KyThi)
+                .Include(x => x.ChiTietBaiLams)
+                .Where(x => x.NguoiDungId == userId && x.TrangThai == EnumTrangThaiBaiLam.DaCham)
+                .OrderByDescending(x => x.ThoiDiemNop)
+                .Select(x => new BaiLamDto
+                {
+                    Id = x.Id,
+                    KyThiId = x.KyThiId,
+                    TenKyThi = x.KyThi != null ? x.KyThi.TenKyThi : "Không xác định",
+                    MonHoc = (x.KyThi != null && x.KyThi.MonHoc.HasValue) ? x.KyThi.MonHoc.ToString() : string.Empty,
+                    ThoiDiemBatDau = x.ThoiDiemBatDau,
+                    ThoiDiemNop = x.ThoiDiemNop,
+                    Diem = x.Diem,
+                    SoCauDung = x.SoCauDung,
+                    TongSoCau = x.ChiTietBaiLams.Count()
+                }).ToListAsync();
+
+            return query;
+        }
+        public async Task<BaiLamReviewDto> GetChiTietBaiLamHocVienAsync(Guid baiLamId, Guid userId)
+        {
+            // 1. Chỉ lấy bài làm nếu ĐÚNG LÀ CỦA USER ĐÓ (Bảo mật 100%)
+            var baiLam = await _UnitOfWork.BaiLamRepository.GetTableNoTracking()
+                .Include(x => x.KyThi)
+                .Include(x => x.NguoiDung)
+                .FirstOrDefaultAsync(x => x.Id == baiLamId && x.NguoiDungId == userId);
+
+            if (baiLam == null)
+                throw new ArgumentException("Không tìm thấy bài làm hoặc bạn không có quyền xem.");
+
+            // 2. Kéo toàn bộ đề gốc
+            var deThiGoc = await _UnitOfWork.CauHoiKyThiRepository.GetTableNoTracking()
+                .Include(x => x.CauHoi).ThenInclude(c => c.DapAns)
+                .Include(x => x.CauHoi).ThenInclude(c => c.MenhDeDungSais)
+                .Include(x => x.CauHoi).ThenInclude(c => c.DapAnDienKetQuas)
+                .Where(x => x.KyThiId == baiLam.KyThiId)
+                .OrderBy(x => x.PhanThi).ThenBy(x => x.ThuTu)
+                .ToListAsync();
+
+            // 3. Lấy chi tiết bài làm của sinh viên
+            var chiTietBaiLamSV = await _UnitOfWork.ChiTietBaiLamRepository.GetTableNoTracking()
+                .Include(x => x.ChiTietTraLoiMenhDes)
+                .Where(x => x.BaiLamId == baiLamId)
+                .ToListAsync();
+
+            // 4. Map Dữ liệu
+            var reviewDto = new BaiLamReviewDto
+            {
+                BaiLamId = baiLam.Id,
+                KyThiId = baiLam.KyThiId ?? Guid.Empty,
+                TenKyThi = baiLam.KyThi?.TenKyThi ?? "N/A",
+                TenSinhVien = baiLam.NguoiDung?.Ten ?? "Học viên",
+                MonHoc = baiLam.KyThi != null && baiLam.KyThi.MonHoc.HasValue ? baiLam.KyThi.MonHoc.ToString() : null,
+                Diem = baiLam.Diem,
+                SoCauDung = baiLam.SoCauDung,
+                TongSoCau = deThiGoc.Count,
+                ThoiDiemBatDau = baiLam.ThoiDiemBatDau,
+                ThoiDiemNop = baiLam.ThoiDiemNop
+            };
+
+            // 5. Trộn đáp án để trả về UI
+            foreach (var cauKyThi in deThiGoc)
+            {
+                var cauHoi = cauKyThi.CauHoi;
+                var traLoiSV = chiTietBaiLamSV.FirstOrDefault(x => x.CauHoiId == cauKyThi.CauHoiId);
+
+                var cauHoiDto = new CauHoiReviewDto
+                {
+                    CauHoiId = cauKyThi.CauHoiId,
+                    ThuTu = cauKyThi.ThuTu,
+                    PhanThi = cauKyThi.PhanThi,
+                    NoiDungCauHoi = cauHoi.NoiDung ?? "",
+                    GiaiThich = cauHoi.GiaiThich,
+                    IsCorrect = false
+                };
+
+                if (cauKyThi.PhanThi == EnumLoaiPhanThi.TracNghiem)
+                {
+                    cauHoiDto.DapAns = cauHoi.DapAns.Select(d => new DapAnReviewDto { Id = d.Id, NoiDung = d.NoiDung, LaDapAnDung = d.LaDapAnDung }).ToList();
+                    cauHoiDto.DapAnHocVienChonId = traLoiSV?.DapAnId;
+                    var dapAnDung = cauHoi.DapAns.FirstOrDefault(x => x.LaDapAnDung);
+                    if (dapAnDung != null && cauHoiDto.DapAnHocVienChonId == dapAnDung.Id) cauHoiDto.IsCorrect = true;
+                }
+                else if (cauKyThi.PhanThi == EnumLoaiPhanThi.MenhDeDungSai)
+                {
+                    int soYChinhXac = 0;
+                    cauHoiDto.MenhDes = cauHoi.MenhDeDungSais.Select(md =>
+                    {
+                        var luaChonSV = traLoiSV?.ChiTietTraLoiMenhDes.FirstOrDefault(x => x.MenhDeDungSaiId == md.Id)?.LuaChonCuaHocVien;
+                        if (luaChonSV.HasValue && luaChonSV.Value == md.LaDung) soYChinhXac++;
+
+                        return new MenhDeReviewDto { Id = md.Id, NoiDung = md.NoiDung, LaDung = md.LaDung, LuaChonCuaHocVien = luaChonSV };
+                    }).ToList();
+
+                    if (soYChinhXac == cauHoi.MenhDeDungSais.Count && cauHoi.MenhDeDungSais.Count > 0) cauHoiDto.IsCorrect = true;
+                }
+                else if (cauKyThi.PhanThi == EnumLoaiPhanThi.DienKetQua)
+                {
+                    var dapAnDung = cauHoi.DapAnDienKetQuas.FirstOrDefault();
+                    cauHoiDto.GiaTriDung = dapAnDung?.GiaTriDung;
+                    cauHoiDto.SaiSoChoPhep = dapAnDung?.SaiSoChoPhep;
+                    cauHoiDto.GiaTriHocVienNhap = traLoiSV?.GiaTriNhap;
+
+                    if (dapAnDung != null && cauHoiDto.GiaTriHocVienNhap.HasValue)
+                    {
+                        float saiSo = Math.Abs(cauHoiDto.GiaTriHocVienNhap.Value - dapAnDung.GiaTriDung);
+                        if (saiSo <= dapAnDung.SaiSoChoPhep) cauHoiDto.IsCorrect = true;
+                    }
+                }
+
+                reviewDto.DanhSachCauHoi.Add(cauHoiDto);
+            }
+
+            return reviewDto;
         }
     }
 

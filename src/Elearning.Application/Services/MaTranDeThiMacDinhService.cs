@@ -173,5 +173,56 @@ namespace Elearning.Application.Services
             await _unitOfWork.CompleteAsync(_RequestContext.CurrentIdUser);
             return true;
         }
+        public async Task<List<MaTranDeThiMacDinhDto>> GetActiveByKyThiIdAsync(Guid kyThiId)
+        {
+            // 1. Lấy thông tin Kỳ thi
+            var kyThi = await _unitOfWork.KyThiRepository.GetByIdAsync(kyThiId);
+            if (kyThi == null)
+            {
+                return new List<MaTranDeThiMacDinhDto>();
+            }
+
+            // 2. TÌM MÔN HỌC ĐÍCH CỦA KỲ THI
+            // Ưu tiên 1: Lấy môn học được gán trực tiếp trên Kỳ thi
+            Elearning.Shared.Contracts.Portal.Enums.MonHocEnum? targetMonHoc = kyThi.MonHoc;
+
+            // Ưu tiên 2: Nếu Kỳ thi không gán Môn trực tiếp nhưng có Khóa học, thì lấy Môn từ Khóa học
+            if (targetMonHoc == null && kyThi.KhoaHocId.HasValue)
+            {
+                var khoaHoc = await _unitOfWork.KhoaHocRepository.GetByIdAsync(kyThi.KhoaHocId.Value);
+                if (khoaHoc != null)
+                {
+                    targetMonHoc = khoaHoc.MonHoc;
+                }
+            }
+
+            // 3. XÂY DỰNG TRUY VẤN TÌM MA TRẬN
+            var query = _unitOfWork.MaTranDeThiMacDinhRepository
+                .GetTableNoTracking()
+                .Include(x => x.ChiTiets) // Kéo theo chi tiết để tính tổng câu hỏi
+                .Where(x => x.IsActive);  // Chỉ lấy ma trận đang Bật
+
+            // Nếu xác định được Môn học (từ Kỳ thi hoặc Khóa học), thì bắt buộc lọc theo Môn đó.
+            // (Lưu ý: Nếu Kỳ thi trơ trọi, ko môn, ko khóa học, query sẽ thả cửa lấy TẤT CẢ ma trận cho user tự chọn)
+            if (targetMonHoc.HasValue)
+            {
+                query = query.Where(x => x.MonHoc == targetMonHoc.Value);
+            }
+
+            // 4. THỰC THI TRUY VẤN VÀ ĐỔ DỮ LIỆU RA DTO
+            var dsMaTran = await query
+                .Select(x => new MaTranDeThiMacDinhDto
+                {
+                    Id = x.Id,
+                    TenMaTran = x.TenMaTran,
+                    MonHoc = x.MonHoc,
+                    // An toàn tuyệt đối không bao giờ dính lỗi NullReferenceException
+                    TongSoCau = x.ChiTiets != null ? x.ChiTiets.Sum(c => c.SoLuong) : 0,
+                    IsActive = x.IsActive
+                })
+                .ToListAsync();
+
+            return dsMaTran;
+        }
     }
 }

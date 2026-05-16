@@ -1,4 +1,4 @@
-﻿@using Elearning.Shared.Commons.Interfaces.Extentions
+﻿@* @using Elearning.Shared.Commons.Interfaces.Extentions
 @using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
 @using Elearning.Shared.Contracts.Portal.Forms.KyThi
 @using Elearning.Shared.Contracts.Portal.Enums
@@ -159,6 +159,143 @@
             else
             {
                 ToastService.ShowError(result.Message ?? "Có lỗi xảy ra, có thể ngân hàng không đủ câu hỏi.");
+            }
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+} *@
+@using Elearning.Shared.Commons.Interfaces.Extentions
+@using Elearning.Shared.Commons.Model.ServiceCustomHttpClient
+@using Elearning.Shared.Contracts.Portal.Dtos
+@using Elearning.Shared.Contracts.Portal.Enums
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
+@using Elearning.Shared.Commons.Extensions
+
+@implements IDialogContentComponent<Guid>
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.TableLightning())" />
+        <FluentLabel Typo="Typography.PaneHeader">Sinh đề thi tự động (Random)</FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    @if (IsLoading)
+    {
+        <FluentProgressRing />
+    }
+    else
+    {
+        <div style="margin-bottom: 20px;">
+            <span style="color: gray; font-size: 0.9em;">
+                Hệ thống sẽ lấy cấu hình từ Ma trận đã chọn để bốc câu hỏi ngẫu nhiên từ Ngân hàng và ghi đè lên đề thi hiện tại.
+            </span>
+        </div>
+
+        <FluentCombobox Items="@AvailableMaTrans"
+                        OptionText="@(i => $"{i.TenMaTran} ({i.TongSoCau} câu)")"
+                        OptionValue="@(i => i.Id.ToString())"
+                        @bind-Value="SelectedMaTranIdStr"
+                        Autocomplete="ComboboxAutocomplete.Both"
+                        Placeholder="Gõ để tìm kiếm hoặc chọn ma trận..."
+                        Label="Chọn Ma trận cấu hình sẵn (*)"
+                        Style="width: 100%; margin-bottom: 200px;" />
+        <!-- Margin-bottom để chừa khoảng trống cho dropdown xổ xuống không bị che mất -->
+    }
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="() => Dialog.CancelAsync()" Disabled="IsProcessing">Hủy</FluentButton>
+    <FluentButton Appearance="Appearance.Accent" OnClick="ThucThiRandom" Loading="IsProcessing" IconStart="@(new Icons.Regular.Size16.Play())">
+        Bắt đầu Random
+    </FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+
+    // Nhận KyThiId từ ngoài truyền vào
+    [Parameter] public Guid Content { get; set; }
+
+    [Inject] private ICallServiceRegistry CallService { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
+
+    private bool IsLoading = true;
+    private bool IsProcessing = false;
+
+    // Lưu ID của Ma trận được chọn dưới dạng chuỗi (để bind với Combobox)
+    private string? SelectedMaTranIdStr;
+
+    // Danh sách Ma trận lấy từ Backend
+    private List<MaTranDeThiMacDinhDto> AvailableMaTrans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        // GỌI API LẤY DANH SÁCH MA TRẬN
+        // Lưu ý: Bác cần đảm bảo Backend có viết API này (lọc Ma trận đang Active theo Kỳ Thi ID)
+        var req = new ApiRequestModel
+        {
+            ApiService = ServicesRegistryEnum.ServicePortal,
+            Endpoint = $"/MaTranDeThiMacDinh/active-by-kythi/{Content}",
+            HasAuthorization = true
+        };
+
+        var res = await CallService.Get<List<MaTranDeThiMacDinhDto>>(req);
+
+        if (res.Status == StatusCode.OK && res.Data != null)
+        {
+            AvailableMaTrans = res.Data;
+        }
+        else
+        {
+            ToastService.ShowError("Không thể tải danh sách Ma trận. Vui lòng kiểm tra lại kết nối.");
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task ThucThiRandom()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedMaTranIdStr))
+        {
+            ToastService.ShowWarning("Vui lòng chọn 1 ma trận để trộn đề.");
+            return;
+        }
+
+        IsProcessing = true;
+        try
+        {
+            var payload = new
+            {
+                KyThiId = Content,
+                MaTranId = Guid.Parse(SelectedMaTranIdStr)
+            };
+
+            var req = new ApiRequestModel
+            {
+                ApiService = ServicesRegistryEnum.ServicePortal,
+                Endpoint = $"/KyThi/random-theo-matran",
+                HasAuthorization = true
+            };
+
+            // DÙNG LẠI KIỂU <bool>
+            var result = await CallService.Post<bool>(req, payload);
+
+            if (result.Status == StatusCode.OK)
+            {
+                ToastService.ShowSuccess("Đã khởi tạo đề thi tự động thành công!");
+                await Dialog.CloseAsync(true);
+            }
+            else
+            {
+                // Lấy thẳng result.Message, nó chính là câu "Ngân hàng không đủ..."
+                ToastService.ShowError(result.Message ?? "Lỗi: Ngân hàng không đủ câu hỏi.");
             }
         }
         finally

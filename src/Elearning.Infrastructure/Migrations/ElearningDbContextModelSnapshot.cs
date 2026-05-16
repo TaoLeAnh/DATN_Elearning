@@ -55,6 +55,9 @@ namespace Elearning.Infrastructure.Migrations
                     b.Property<string>("NoiDung")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TaiLieuAI")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ThoiLuong")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -651,9 +654,6 @@ namespace Elearning.Infrastructure.Migrations
                     b.Property<Guid>("CauHoiId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("CauHoiId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
 
@@ -681,8 +681,6 @@ namespace Elearning.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CauHoiId");
-
-                    b.HasIndex("CauHoiId1");
 
                     b.ToTable("DapAnDienKetQua", (string)null);
                 });
@@ -967,6 +965,10 @@ namespace Elearning.Infrastructure.Migrations
                     b.Property<Guid>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("HinhAnhUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<bool>("LaDung")
                         .HasColumnType("bit");
 
@@ -980,9 +982,7 @@ namespace Elearning.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("NoiDung")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ThuTu")
                         .HasColumnType("int");
@@ -1323,15 +1323,10 @@ namespace Elearning.Infrastructure.Migrations
             modelBuilder.Entity("Elearning.Domain.Entities.DapAnDienKetQua", b =>
                 {
                     b.HasOne("Elearning.Domain.Entities.CauHoi", "CauHoi")
-                        .WithMany()
+                        .WithMany("DapAnDienKetQuas")
                         .HasForeignKey("CauHoiId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Elearning.Domain.Entities.CauHoi", null)
-                        .WithMany("DapAnDienKetQuas")
-                        .HasForeignKey("CauHoiId1")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CauHoi");
                 });

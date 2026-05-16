@@ -47,5 +47,22 @@ namespace Elearning.API.Controllers.v1
                 return NotFound(ex.Message);
             }
         }
+        [HttpPut("{id:guid}/duyet")]
+        public async Task<ActionResult> DuyetBaiLam(Guid id)
+        {
+            try
+            {
+                var result = await _service.DuyetBaiLamAsync(id);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+            }
+        }
     }
 }

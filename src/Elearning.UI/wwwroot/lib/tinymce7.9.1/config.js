@@ -14,12 +14,12 @@
             token: ''
         },
         setUploadConfig: function (domain, token) {
-            if (domain && token) {
+            if (domain) {
                 CNamespace.uploadConfig.domain = domain;
                 CNamespace.uploadConfig.token = token;
                 console.log("Cấu hình upload cho TinyMCE đã được thiết lập.");
             } else {
-                console.erer("Lỗi: Thiếu domain hoặc token khi thiết lập cấu hình upload cho TinyMCE.");
+                console.error("Lỗi: Thiếu domain hoặc token khi thiết lập cấu hình upload cho TinyMCE.");
             }
         },
 
@@ -160,16 +160,28 @@
             promotion: false,
             license_key: 'gpl',
             language: 'vi',
-            plugins: 'preview importcss searchreplace autolink directionality code  visualchars fullscreen image link media codesample table charmap nonbreaking anchor insertdatetime advlist lists wordcount help hr',
+            //plugins: 'preview importcss searchreplace autolink directionality code  visualchars fullscreen image link media codesample table charmap nonbreaking anchor insertdatetime advlist lists wordcount help hr',
+            plugins: 'preview importcss searchreplace autolink directionality code visualchars fullscreen image link media codesample table charmap nonbreaking anchor insertdatetime advlist lists wordcount help',
+            external_plugins: {
+                'tiny_mce_wiris': 'https://cdn.jsdelivr.net/npm/@wiris/mathtype-tinymce6/plugin.min.js'
+            },
             menubar: 'edit view insert format table',
+            //toolbar:
+            //    "undo redo fullscreen| fontfamily fontsize | " +
+            //    "bold italic underline strikethrough | forecolor backcolor | " +
+            //    "alignleft aligncenter alignright alignjustify | lineheight | " +
+            //    "link image insertmultipleimages media table hr boxtemplate| " +
+            //    "bullist numlist outdent indent | " +
+            //    "removeformat spellcheck_vi insertbr | code preview blocks",
             toolbar:
                 "undo redo fullscreen| fontfamily fontsize | " +
                 "bold italic underline strikethrough | forecolor backcolor | " +
                 "alignleft aligncenter alignright alignjustify | lineheight | " +
                 "link image insertmultipleimages media table hr boxtemplate| " +
                 "bullist numlist outdent indent | " +
-                "removeformat spellcheck_vi insertbr | code preview blocks",
-            toolbar_mode: 'sliding',
+                "removeformat spellcheck_vi insertbr | code preview blocks | " +
+                "tiny_mce_wiris_formulaEditor",
+            toolbar_mode: 'wrap',
             paste_data_images: true,
 
             paste_as_text: false,
@@ -234,7 +246,8 @@
                 'thead,tbody,tfoot,' +
                 'tr[rowspan|class|style|border],' +
                 'td[colspan|rowspan|class|style|width|height|border],' +
-                'th[colspan|rowspan|class|style|width|height|border]',
+                'th[colspan|rowspan|class|style|width|height|border],' +
+                'math[*],mfrac[*],msup[*],msub[*],mi[*],mo[*],mn[*],mrow[*],msqrt[*],mtext[*],mspace[*],mtable[*],mtr[*],mtd[*]',
             invalid_elements: '',
             forced_root_block: 'p',
 
@@ -269,34 +282,50 @@
                     .catch(err => console.warn("Media picker error:", err));
             },
 
+            //images_upload_handler: async (blobInfo) => {
+            //    if (!CNamespace.uploadConfig.domain || !CNamespace.uploadConfig.token) {
+            //        throw new Error('Cấu hình upload chưa được thiết lập từ server.');
+            //    }
+            //    const uploadUrl = `${CNamespace.uploadConfig.domain}/api/v1/intergration/upload-image-for-paste`;
+
+            //    try {
+            //        const formData = new FormData();
+            //        formData.append('file', blobInfo.blob(), blobInfo.filename());
+
+            //        const res = await fetch(uploadUrl, {
+            //            method: 'POST',
+            //            body: formData,
+            //            headers: {
+            //                'si-token': CNamespace.uploadConfig.token
+            //            }
+            //        });
+
+            //        if (!res.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}`);
+
+            //        const imageUrl = await res.text();
+            //        if (!imageUrl) throw new Error('Server trả về một URL trống.');
+
+            //        return imageUrl;
+            //    } catch (error) {
+            //        console.error('Lỗi khi tải ảnh lên:', error);
+            //        throw new Error('Tải ảnh lên thất bại: ' + error.message);
+            //    }
+            //},
             images_upload_handler: async (blobInfo) => {
-                if (!CNamespace.uploadConfig.domain || !CNamespace.uploadConfig.token) {
-                    throw new Error('Cấu hình upload chưa được thiết lập từ server.');
-                }
-                const uploadUrl = `${CNamespace.uploadConfig.domain}/api/v1/intergration/upload-image-for-paste`;
+                const uploadUrl = `${CNamespace.uploadConfig.domain}/api/upload/image`;
 
-                try {
-                    const formData = new FormData();
-                    formData.append('file', blobInfo.blob(), blobInfo.filename());
+                const formData = new FormData();
+                formData.append('file', blobInfo.blob(), blobInfo.filename());
 
-                    const res = await fetch(uploadUrl, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'si-token': CNamespace.uploadConfig.token 
-                        }
-                    });
+                const res = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    if (!res.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}`);
-
-                    const imageUrl = await res.text();
-                    if (!imageUrl) throw new Error('Server trả về một URL trống.');
-
-                    return imageUrl;
-                } catch (error) {
-                    console.error('Lỗi khi tải ảnh lên:', error);
-                    throw new Error('Tải ảnh lên thất bại: ' + error.message);
-                }
+                if (!res.ok) throw new Error(`Lỗi HTTP: ${res.status}`);
+                const imageUrl = await res.text();
+                if (!imageUrl) throw new Error('Server trả về URL trống');
+                return imageUrl;
             },
             setup: (editor) => {
                 CNamespace.editorInstance = editor;
@@ -319,88 +348,127 @@
                         }
                     }
                 });
+                //editor.on('PastePostProcess', async (e) => {
+
+
+                //    if (!CNamespace.uploadConfig.domain || !CNamespace.uploadConfig.token) {
+                //        console.error('Cấu hình upload chưa được thiết lập. Không thể upload ảnh được dán.');
+                //        e.node.querySelectorAll('img[src^="data:"]').forEach(img => img.remove());
+                //        return;
+                //    }
+
+                //    // ===== THÊM CLASS Căn giữ =====
+                //    e.node.querySelectorAll('img').forEach(img => {
+                //        // 1. Thêm class căn giữa (giữ nguyên logic cũ)
+                //        if (!img.classList.contains('centered')) {
+                //            img.classList.add('centered');
+                //        }
+
+                //        // 2. LOGIC MỚI: TÌM CAPTION THÔNG MINH HƠN
+                //        let potentialCaptionNode = null;
+                //        let insertionTarget = img; // Mặc định chèn caption sau img
+
+                //        // Helper: Kiểm tra xem một node có phải là caption hợp lệ không
+                //        const isCaptionCandidate = (node) => {
+                //            return node &&
+                //                node.innerText &&
+                //                node.innerText.trim().length > 0 &&
+                //                node.innerText.trim().length < 500 && // Giới hạn độ dài (tránh lấy nhầm cả bài văn)
+                //                !/^H[1-6]$/.test(node.tagName); // Không lấy thẻ tiêu đề làm caption
+                //        };
+
+                //        // Case A: Ảnh trần (img) + Text (img.next)
+                //        if (isCaptionCandidate(img.nextElementSibling)) {
+                //            potentialCaptionNode = img.nextElementSibling;
+                //        }
+                //        // Case B: Ảnh trong thẻ A (a > img) -> Text nằm sau A
+                //        else if (img.parentElement.tagName === 'A') {
+                //            insertionTarget = img.parentElement; // Chuyển điểm chèn ra sau thẻ A
+                //            if (isCaptionCandidate(img.parentElement.nextElementSibling)) {
+                //                potentialCaptionNode = img.parentElement.nextElementSibling;
+                //            }
+                //            // Case C: Ảnh trong Div > A (div > a > img) -> Text nằm sau Div bao (thường gặp ở Moj, Dân trí...)
+                //            else if (img.parentElement.parentElement.tagName === 'DIV' &&
+                //                isCaptionCandidate(img.parentElement.parentElement.nextElementSibling)) {
+                //                // Chuyển điểm chèn ra sau cái Div bao ngoài cùng
+                //                insertionTarget = img.parentElement.parentElement;
+                //                potentialCaptionNode = img.parentElement.parentElement.nextElementSibling;
+                //            }
+                //        }
+                //        // Case D: Ảnh trong Div (div > img) -> Text nằm sau Div
+                //        else if (img.parentElement.tagName === 'DIV') {
+                //            insertionTarget = img.parentElement;
+                //            if (isCaptionCandidate(img.parentElement.nextElementSibling)) {
+                //                potentialCaptionNode = img.parentElement.nextElementSibling;
+                //            }
+                //        }
+
+                //        // 3. XỬ LÝ NỘI DUNG CAPTION
+                //        let captionHtml = 'Nhập mô tả ảnh tại đây...';
+                //        let isDefault = true;
+
+                //        if (potentialCaptionNode) {
+                //            // Lấy nội dung HTML để giữ định dạng (in nghiêng, đậm...) của nguồn
+                //            captionHtml = potentialCaptionNode.innerHTML;
+                //            isDefault = false;
+                //            // Xóa node gốc đi để tránh bị lặp nội dung
+                //            potentialCaptionNode.remove();
+                //        }
+
+                //        // 4. TẠO THẺ CAPTION CHUẨN CỦA EDITOR
+                //        // Kiểm tra xem tại vị trí chèn đã có caption chưa (để tránh chèn đè hoặc chèn kép)
+                //        const nextNode = insertionTarget.nextElementSibling;
+                //        if (!nextNode || !nextNode.classList.contains('img-caption')) {
+                //            const desc = document.createElement('p');
+                //            desc.innerHTML = captionHtml;
+                //            desc.classList.add('img-caption');
+
+                //            insertionTarget.insertAdjacentElement('afterend', desc);
+                //        }
+                //    });
+
+                //    const imgs = e.node.querySelectorAll('img[src^="data:"]');
+                //    if (imgs.length === 0) return;
+                //    const uploadUrl = `${CNamespace.uploadConfig.domain}/api/v1/intergration/upload-image-for-paste`;
+
+                //    for (const img of imgs) {
+                //        try {
+                //            const blob = await (await fetch(img.src)).blob();
+                //            const formData = new FormData();
+                //            formData.append('file', blob, 'pasted-image.png');
+
+                //            const res = await fetch(uploadUrl, {
+                //                method: 'POST',
+                //                body: formData,
+                //                headers: {
+                //                    'si-token': CNamespace.uploadConfig.token
+                //                }
+                //            });
+
+                //            if (!res.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}`);
+
+                //            const imageUrl = await res.text();
+                //            if (!imageUrl) throw new Error('Server đã trả về một URL rỗng.');
+
+                //            img.src = imageUrl;
+                //        } catch (error) {
+                //            console.error('Lỗi khi tải ảnh được dán:', error);
+                //            img.remove();
+                //        }
+                //    }
+                //});
                 editor.on('PastePostProcess', async (e) => {
 
-                    
-                    if (!CNamespace.uploadConfig.domain || !CNamespace.uploadConfig.token) {
-                        console.error('Cấu hình upload chưa được thiết lập. Không thể upload ảnh được dán.');
-                        e.node.querySelectorAll('img[src^="data:"]').forEach(img => img.remove());
-                        return;
-                    }
-                    
-                    // ===== THÊM CLASS Căn giữ =====
-                    e.node.querySelectorAll('img').forEach(img => {
-                        // 1. Thêm class căn giữa (giữ nguyên logic cũ)
-                        if (!img.classList.contains('centered')) {
-                            img.classList.add('centered');
-                        }
+                    // Xóa ảnh file:/// từ Word
+                    e.node.querySelectorAll('img[src^="file:"]').forEach(img => img.remove());
 
-                        // 2. LOGIC MỚI: TÌM CAPTION THÔNG MINH HƠN
-                        let potentialCaptionNode = null;
-                        let insertionTarget = img; // Mặc định chèn caption sau img
+                    // Giữ nguyên phần caption logic ...
 
-                        // Helper: Kiểm tra xem một node có phải là caption hợp lệ không
-                        const isCaptionCandidate = (node) => {
-                            return node &&
-                                node.innerText &&
-                                node.innerText.trim().length > 0 &&
-                                node.innerText.trim().length < 500 && // Giới hạn độ dài (tránh lấy nhầm cả bài văn)
-                                !/^H[1-6]$/.test(node.tagName); // Không lấy thẻ tiêu đề làm caption
-                        };
-
-                        // Case A: Ảnh trần (img) + Text (img.next)
-                        if (isCaptionCandidate(img.nextElementSibling)) {
-                            potentialCaptionNode = img.nextElementSibling;
-                        }
-                        // Case B: Ảnh trong thẻ A (a > img) -> Text nằm sau A
-                        else if (img.parentElement.tagName === 'A') {
-                            insertionTarget = img.parentElement; // Chuyển điểm chèn ra sau thẻ A
-                            if (isCaptionCandidate(img.parentElement.nextElementSibling)) {
-                                potentialCaptionNode = img.parentElement.nextElementSibling;
-                            }
-                            // Case C: Ảnh trong Div > A (div > a > img) -> Text nằm sau Div bao (thường gặp ở Moj, Dân trí...)
-                            else if (img.parentElement.parentElement.tagName === 'DIV' &&
-                                isCaptionCandidate(img.parentElement.parentElement.nextElementSibling)) {
-                                // Chuyển điểm chèn ra sau cái Div bao ngoài cùng
-                                insertionTarget = img.parentElement.parentElement;
-                                potentialCaptionNode = img.parentElement.parentElement.nextElementSibling;
-                            }
-                        }
-                        // Case D: Ảnh trong Div (div > img) -> Text nằm sau Div
-                        else if (img.parentElement.tagName === 'DIV') {
-                            insertionTarget = img.parentElement;
-                            if (isCaptionCandidate(img.parentElement.nextElementSibling)) {
-                                potentialCaptionNode = img.parentElement.nextElementSibling;
-                            }
-                        }
-
-                        // 3. XỬ LÝ NỘI DUNG CAPTION
-                        let captionHtml = 'Nhập mô tả ảnh tại đây...';
-                        let isDefault = true;
-
-                        if (potentialCaptionNode) {
-                            // Lấy nội dung HTML để giữ định dạng (in nghiêng, đậm...) của nguồn
-                            captionHtml = potentialCaptionNode.innerHTML;
-                            isDefault = false;
-                            // Xóa node gốc đi để tránh bị lặp nội dung
-                            potentialCaptionNode.remove();
-                        }
-
-                        // 4. TẠO THẺ CAPTION CHUẨN CỦA EDITOR
-                        // Kiểm tra xem tại vị trí chèn đã có caption chưa (để tránh chèn đè hoặc chèn kép)
-                        const nextNode = insertionTarget.nextElementSibling;
-                        if (!nextNode || !nextNode.classList.contains('img-caption')) {
-                            const desc = document.createElement('p');
-                            desc.innerHTML = captionHtml;
-                            desc.classList.add('img-caption');
-
-                            insertionTarget.insertAdjacentElement('afterend', desc);
-                        }
-                    });
-
+                    // Sửa phần upload ảnh base64
                     const imgs = e.node.querySelectorAll('img[src^="data:"]');
                     if (imgs.length === 0) return;
-                    const uploadUrl = `${CNamespace.uploadConfig.domain}/api/v1/intergration/upload-image-for-paste`;
+
+                    const uploadUrl = `${CNamespace.uploadConfig.domain}/api/upload/image`;
 
                     for (const img of imgs) {
                         try {
@@ -410,20 +478,14 @@
 
                             const res = await fetch(uploadUrl, {
                                 method: 'POST',
-                                body: formData,
-                                headers: {
-                                    'si-token': CNamespace.uploadConfig.token 
-                                }
+                                body: formData
+                                // Bỏ header si-token
                             });
 
-                            if (!res.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${res.status}`);
-
-                            const imageUrl = await res.text();
-                            if (!imageUrl) throw new Error('Server đã trả về một URL rỗng.');
-
-                            img.src = imageUrl;
+                            if (!res.ok) throw new Error(`Lỗi HTTP: ${res.status}`);
+                            img.src = await res.text();
                         } catch (error) {
-                            console.error('Lỗi khi tải ảnh được dán:', error);
+                            console.error('Lỗi upload ảnh:', error);
                             img.remove();
                         }
                     }

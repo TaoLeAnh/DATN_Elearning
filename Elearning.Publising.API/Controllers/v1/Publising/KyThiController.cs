@@ -1,6 +1,7 @@
 ﻿
 using Elearning.Publising.Application.Interfaces;
 using Elearning.Shared.Contracts.Portal.Dtos;
+using Elearning.Shared.Contracts.Portal.Dtos.KyThi;
 using Elearning.Shared.Contracts.Portal.Enums;
 using Microsoft.AspNetCore.Mvc;
 
@@ -101,7 +102,24 @@ namespace Elearning.Publising.API.Controllers.v1.Publising
                 return BadRequest(ex.Message);
             }
         }
-
+        [HttpGet("my-exams")]
+        public async Task<ActionResult<List<BaiLamDto>>> GetMyExams([FromQuery] Guid userId)
+        {
+            try
+            {
+                var data = await _service.GetMyExamsAsync(userId);
+                return Ok(data);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                // Bắt lỗi hệ thống để không bị sập app
+                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+            }
+        }
         [HttpPost("log-vi-pham")]
         public async Task<ActionResult<bool>> LogViPham([FromBody] LogViPhamRequest request)
         {
@@ -113,6 +131,23 @@ namespace Elearning.Publising.API.Controllers.v1.Publising
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+        [HttpGet("bai-lam/{baiLamId:guid}/review")]
+        public async Task<ActionResult<BaiLamReviewDto>> GetReviewBaiLamUser(Guid baiLamId)
+        {
+            // Lấy ID User từ Token
+            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            try
+            {
+                var result = await _service.GetChiTietBaiLamHocVienAsync(baiLamId, Guid.Parse(userIdString));
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
         }
 

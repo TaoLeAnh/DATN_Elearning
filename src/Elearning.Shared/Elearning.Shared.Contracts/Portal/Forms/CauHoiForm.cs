@@ -34,5 +34,20 @@ namespace Elearning.Shared.Contracts.Portal.Forms
         public Guid GiangVienId { get; set; }
 
         public List<DapAnForm> DapAns { get; set; } = new List<DapAnForm>();
+        public List<MenhDeDungSaiForm> MenhDeDungSais { get; set; } = new();
+        public List<DapAnDienKetQuaForm> DapAnDienKetQuas { get; set; } = new();
+    }
+    public class MenhDeDungSaiForm
+    {
+        public string? HinhAnhUrl { get; set; }
+        public string NoiDung { get; set; } = string.Empty;
+        public bool LaDung { get; set; }
+        public int ThuTu { get; set; }
+    }
+
+    public class DapAnDienKetQuaForm
+    {
+        public float GiaTriDung { get; set; }
+        public float SaiSoChoPhep { get; set; }
     }
 }
